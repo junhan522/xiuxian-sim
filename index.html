@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#10151f">
+  <title>修仙模拟器</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="ach-toast" class="ach-toast" hidden></div>
+  <div id="app">
+
+    <!-- ============ 首页 ============ -->
+    <section id="view-home" class="view">
+      <div class="home-hero">
+        <h1 class="home-title">修仙模拟器</h1>
+        <div class="home-sub">——看看你能不能成为白日飞升的那一个？——</div>
+      </div>
+      <div class="home-count">已有 <b id="home-count">--</b> 位修士觉醒灵根 · 已有 <b id="home-ascend-count">--</b> 位修士飞升成仙</div>
+      <div class="home-lv">
+        <div class="lv-head">
+          <span class="lv-name">玩家等级</span>
+          <b class="lv-lv" id="home-lv">[Lv.0]</b>
+          <span class="lv-bonus" id="home-lv-bonus"></span>
+          <span class="lv-exp" id="home-lv-exp">0/50</span>
+        </div>
+        <div class="lv-bar"><div class="lv-bar-fill" id="home-lv-fill"></div></div>
+      </div>
+      <div class="home-btns">
+        <button class="btn btn-primary btn-big" id="btn-start">开始修仙</button>
+      </div>
+      <div class="home-ach-row">
+        <button class="btn btn-big" id="btn-rank">🏆 仙榜（本地）</button>
+        <button class="btn btn-big" id="btn-ach">
+          <span>⭐ 成就</span>
+          <span class="ach-btn-tip" id="ach-tip">成就增加高阶灵根概率：0%</span>
+        </button>
+      </div>
+      <div class="home-link-btns">
+        <button class="btn btn-big" id="btn-settings">⚙ 设置</button>
+        <button class="btn btn-big" id="btn-about">📜 说明</button>
+      </div>
+      <div class="home-foot">纯前端小游戏 · 存档保存在本地浏览器</div>
+    </section>
+
+    <!-- ============ 游戏 ============ -->
+    <section id="view-game" class="view">
+      <div class="game-top">
+        <div class="game-title">修仙模拟器</div>
+        <button class="btn-pause" id="btn-pause">⏸</button>
+      </div>
+      <div class="attr-grid">
+        <div class="attr-card">
+          <div class="attr-name">境界-<b class="attr-rank" id="attr-title">炼气</b></div>
+          <div class="attr-val" id="attr-lvl">1</div>
+        </div>
+        <div class="attr-card">
+          <div class="attr-name">资质</div>
+          <div class="attr-val" id="attr-apt">--</div>
+        </div>
+        <div class="attr-card">
+          <div class="attr-name">寿元（龄/限）</div>
+          <div class="attr-val" id="attr-life">--</div>
+        </div>
+        <div class="attr-card">
+          <div class="attr-name">战力</div>
+          <div class="attr-val" id="attr-combat">--</div>
+        </div>
+      </div>
+      <div class="log-box" id="log-box"></div>
+    </section>
+
+    <!-- ============ 结算 ============ -->
+    <section id="view-settle" class="view">
+      <div class="settle-box">
+        <div class="settle-title" id="settle-title">--</div>
+        <div class="settle-wuhun" id="settle-wuhun">--</div>
+        <div class="settle-rows">
+          <div class="s-row"><span>修为境界</span><b id="settle-lvl">--</b></div>
+          <div class="s-row"><span>战力</span><b id="settle-combat">--</b></div>
+          <div class="s-row"><span>享年</span><b id="settle-age">--</b></div>
+          <div class="s-row"><span>获得经验</span><b id="settle-exp">--</b></div>
+        </div>
+        <div class="settle-god" id="settle-god" hidden></div>
+        <div class="settle-xinwu" id="settle-xinwu" hidden></div>
+        <div class="settle-rank" id="settle-rank">--</div>
+        <div class="settle-btns">
+          <button class="btn btn-primary btn-big" id="btn-settle-again">再入轮回</button>
+          <button class="btn btn-big" id="btn-settle-review">📜 回顾一生</button>
+          <button class="btn btn-big" id="btn-settle-home">返回首页</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 排行榜 ============ -->
+    <section id="view-rank" class="view page-view">
+      <header class="page-head">
+        <h2 class="page-title">🏆 仙榜</h2>
+        <button class="btn-close" id="btn-close-rank">✕</button>
+      </header>
+      <div class="tabs" id="rank-board"></div>
+      <div class="lb-note" id="rank-note">加载中…</div>
+      <div class="lb-body" id="rank-body"><div class="lb-tip">加载中…</div></div>
+    </section>
+
+    <!-- ============ 成就 ============ -->
+    <section id="view-ach" class="view page-view">
+      <header class="page-head">
+        <h2 class="page-title">⭐ 成就</h2>
+        <button class="btn-close" id="btn-close-ach">✕</button>
+      </header>
+      <div class="ach-total" id="ach-total">成就加成：+0%</div>
+      <div class="ach-list" id="ach-list"></div>
+    </section>
+
+    <!-- ============ 设置 ============ -->
+    <section id="view-settings" class="view page-view">
+      <header class="page-head">
+        <h2 class="page-title">⚙ 设置</h2>
+        <button class="btn-close" id="btn-close-settings">✕</button>
+      </header>
+      <div class="settings-body">
+        <div class="set-card">
+          <label class="set-row">
+            <span class="set-label">🔊 音效</span>
+            <span class="set-switch">
+              <input type="checkbox" id="home-sound" checked>
+              <span class="track"></span>
+            </span>
+          </label>
+        </div>
+        <div class="set-card">
+          <div class="speed-label"><span>⏱ 每年速度</span><b id="speed-val">0.1s</b></div>
+          <input type="range" class="speed-range" id="speed-range" min="0.05" max="1" step="0.05" value="0.1">
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 说明 ============ -->
+    <section id="view-about" class="view page-view">
+      <header class="page-head">
+        <h2 class="page-title">📜 说明</h2>
+        <button class="btn-close" id="btn-close-about">✕</button>
+      </header>
+      <div class="about-body">
+        <div class="about-text">
+          6 岁觉醒，<b>随机抽取</b>灵根与资质、寿元，随后逐年修炼。资质越高，突破越快、战力越强、活得越久；修炼途中还会遇到各种随机事件——奇遇、顿悟、心魔、反噬……<br><br>
+          你唯一的目标，就是 <b>飞升成仙</b>：修炼至巅峰（99 级·半步真仙）后即可每年尝试渡劫，资质越高成功率越大；若曾获得 <b>仙缘</b> 且战力达标，更可走「引仙台」捷径，大幅提升飞升概率！<br><br>
+          每局结束都会获得经验，提升玩家等级；玩家等级越高，觉醒强大灵根的概率越大。完成成就同样能提升高阶灵根概率。快来试试——你，会不会是那个 <b>白日飞升</b> 的天选之人？
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ============ 回顾一生弹窗 ============ -->
+  <div id="review-mask" class="mask" hidden>
+    <div class="mask-box review-box">
+      <div class="mask-title">📜 这一生</div>
+      <div class="review-log" id="review-log"></div>
+      <button class="btn btn-primary" id="btn-review-close">关闭</button>
+    </div>
+  </div>
+
+  <!-- ============ 暂停遮罩 ============ -->
+  <div id="pause-mask" class="mask" hidden>
+    <div class="mask-box">
+      <div class="mask-title">闭关暂停</div>
+      <div class="mask-info" id="pause-info"></div>
+      <button class="btn btn-primary" id="btn-pause-resume">继续修炼</button>
+      <button class="btn" id="btn-pause-settings">⚙ 设置</button>
+      <button class="btn" id="btn-pause-settle">提前结算</button>
+      <button class="btn btn-danger" id="btn-pause-exit">退出本局</button>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="sim.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
