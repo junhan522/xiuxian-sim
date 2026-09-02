@@ -58,6 +58,35 @@ create policy "anyone_can_read_scores"
 > 所以即使 `anonKey` 是公开的（前端可见，这是正常且必须的），别人最多只能往榜里写分或读榜，
 > **无法删除或篡改表结构、也无法删你的数据**。
 
+### 1.2 天下频道播报表 feeds（跨玩家实时播报）
+
+「🌍 天下频道」的登榜 / 加冕 / 挑战胜负播报存在这张表里，同样是**匿名可写、可读，不可改删**：
+
+```sql
+create table if not exists public.feeds (
+  id         bigint generated always as identity primary key,
+  kind       text    not null default 'upload',  -- upload / ascend / coronate / duel_win / duel_lose
+  actor      text    not null default '无名散修', -- 发起者昵称
+  target     text    not null default '',        -- 目标（如被挑战者）
+  extra      text    not null default '',        -- 附加信息（如战力、名次）
+  created_at timestamptz not null default now()
+);
+
+create index if not exists feeds_created_idx on public.feeds (created_at desc);
+
+alter table public.feeds enable row level security;
+
+create policy "anyone_can_insert_feeds"
+  on public.feeds for insert
+  to anon, authenticated
+  with check (true);
+
+create policy "anyone_can_read_feeds"
+  on public.feeds for select
+  to anon, authenticated
+  using (true);
+```
+
 ---
 
 ## 二、拿到凭据并填入 net.js

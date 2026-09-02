@@ -629,3 +629,32 @@ body {
 .coronate-line b { color: var(--gold2); }
 .coronate-tip { margin-top: 14px; font-size: 12px; color: var(--sub); animation: coronateBlink 1.4s ease-in-out infinite; }
 @keyframes coronateBlink { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+/* ---------- 天下频道 · 实时播报 ---------- */
+.world-feed {
+  border: 1px solid rgba(90, 162, 255, 0.35); border-radius: 12px;
+  padding: 9px 12px; margin: 0 0 12px;
+  background: linear-gradient(90deg, rgba(90,162,255,0.10), rgba(143,230,176,0.05));
+}
+.wf-head {
+  font-size: 12px; font-weight: 700; color: #9cc4ff; letter-spacing: 1px;
+  margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+}
+.wf-head::after {
+  content: ""; width: 6px; height: 6px; border-radius: 50%; background: #6fe08a;
+  box-shadow: 0 0 8px #6fe08a; animation: wfLive 1.4s ease-in-out infinite;
+}
+@keyframes wfLive { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+.wf-list { display: flex; flex-direction: column; gap: 3px; }
+.wf-line {
+  font-size: 12px; line-height: 1.6; color: var(--sub);
+  padding-left: 8px; border-left: 2px solid rgba(90,162,255,0.3);
+  animation: wfSlide 0.4s ease both; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wf-line:first-child { color: #d7e4ff; border-left-color: var(--gold); }
+@keyframes wfSlide { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+/* 局内弹幕中混入的真实天下播报，高亮区分 */
+.danmaku.wf-dm {
+  color: rgba(245, 201, 107, 0.9); font-weight: 700;
+  text-shadow: 0 0 8px rgba(245, 201, 107, 0.5), 0 1px 3px rgba(0, 0, 0, 0.7);
+}

@@ -58,17 +58,44 @@ window.NET_CONFIG = {
       return true;
     });
   }
-  /* 拉取天下榜（按战力降序） */
-  function top(limit) {
+  /* 拉取天下榜（按指定字段降序） */
+  var ORDER_FIELDS = { combat: "combat", apt: "apt", lvl: "lvl", age: "age" };
+  function top(limit, orderKey) {
     limit = Math.max(1, Math.min(100, limit || 50));
     if (!enabled()) return Promise.reject(new Error("net-disabled"));
+    var field = ORDER_FIELDS[orderKey] || "combat";
     var q = "/rest/v1/scores?select=nickname,root,apt,lvl,realm,combat,age,ascend,bond,created_at" +
-            "&order=combat.desc&limit=" + limit;
+            "&order=" + field + ".desc&limit=" + limit;
     return fetch(base() + q, { headers: headers() }).then(function (r) {
       if (!r.ok) throw new Error("http " + r.status);
       return r.json();
     });
   }
+  /* 天下频道：跨玩家播报 */
+  function postFeed(kind, actor, target, extra) {
+    if (!enabled()) return Promise.reject(new Error("net-disabled"));
+    var row = {
+      kind: String(kind || "upload").slice(0, 16),
+      actor: cleanNick(actor),
+      target: String(target == null ? "" : target).replace(/[<>]/g, "").trim().slice(0, 12),
+      extra: String(extra == null ? "" : extra).replace(/[<>]/g, "").trim().slice(0, 40)
+    };
+    return fetch(base() + "/rest/v1/feeds", {
+      method: "POST", headers: headers({ "Prefer": "return=minimal" }), body: JSON.stringify(row)
+    }).then(function (r) {
+      if (!r.ok) throw new Error("http " + r.status);
+      return true;
+    });
+  }
+  function feeds(limit) {
+    limit = Math.max(1, Math.min(50, limit || 20));
+    if (!enabled()) return Promise.reject(new Error("net-disabled"));
+    return fetch(base() + "/rest/v1/feeds?select=kind,actor,target,extra,created_at&order=created_at.desc&limit=" + limit,
+      { headers: headers() }).then(function (r) {
+      if (!r.ok) throw new Error("http " + r.status);
+      return r.json();
+    });
+  }
 
-  return { enabled: enabled, submit: submit, top: top, cleanNick: cleanNick, config: cfg };
+  return { enabled: enabled, submit: submit, top: top, cleanNick: cleanNick, config: cfg, postFeed: postFeed, feeds: feeds };
 });

@@ -211,6 +211,7 @@
     $("codex-tip").textContent = "已收集 " + cx.got + " / " + cx.total;
     $("chal-tip").textContent = save.chal.w + save.chal.l > 0
       ? ("挑战战绩 " + save.chal.w + " 胜 " + save.chal.l + " 负") : "同参一战，比拼战力";
+    paintWorldFeed();
   }
   function dateStr(d) {
     d = d || new Date();
@@ -797,10 +798,12 @@
         sGold();
         spawnConfetti(["#f5c96b", "#ffd98a", "#ffffff", "#b98aff"], 70);
         unlockDuelAch(idx);
+        postFeed("duel_win", foe.nickname || "无名散修", "");
       } else {
         res.className = "trib-result duel-result lose";
         res.innerHTML = "💥 惜败（" + (why || "") + "）……第" + (idx + 1) + "位「" + foeName + "」依旧稳坐其上，再来！";
         sDown();
+        postFeed("duel_lose", foe.nickname || "无名散修", "");
       }
       setTimeout(function () { mask.hidden = true; interacting = false; }, 1600);
     }
@@ -842,10 +845,54 @@
     spawnConfetti(["#f5c96b", "#ffd98a", "#ffffff", "#b98aff", "#5aa2ff"], 130);
     setTimeout(function () { spawnConfetti(null, 80); }, 700);
     setTimeout(function () { spawnConfetti(null, 60); }, 1500);
+    postFeed("coronate", "", "第" + pos + "位");
     var hide = function () { box.hidden = true; box.classList.remove("go"); box.onclick = null; };
     box.onclick = hide;
     clearTimeout(box._t);
     box._t = setTimeout(hide, 5200);
+  }
+
+  /* ---------------- 天下频道：跨玩家实时播报 ---------------- */
+  var worldFeeds = [];   /* 最近拉取到的播报缓存 */
+  var wfTimer = null;    /* 轮询计时器 */
+  var FEED_TEXT = {
+    coronate:  function (f) { return "👑 " + f.actor + " 荣登天下榜" + (f.extra || "前三") + "，万众俯首，八方来朝！"; },
+    duel_win:  function (f) { return "⚔ " + f.actor + " 正面击溃榜上高手「" + (f.target || "无名") + "」，一战封神！"; },
+    duel_lose: function (f) { return "💥 " + f.actor + " 挑战「" + (f.target || "无名") + "」惜败，跌坐尘埃，来日再战……"; },
+    ascend:    function (f) { return "🌈 " + f.actor + " 白日飞升，战力 " + (f.extra || "惊人") + "，名动天下！"; },
+    upload:    function (f) { return "📣 " + f.actor + " 登榜天下，战力 " + (f.extra || "不凡") + "。"; }
+  };
+  function feedText(f) {
+    var fn = FEED_TEXT[f && f.kind];
+    return fn ? fn(f) : "🌍 " + ((f && f.actor) || "无名散修") + " 在天下留下了足迹。";
+  }
+  /* 发一条广播（尽力而为，失败静默，绝不影响游戏） */
+  function postFeed(kind, target, extra) {
+    if (!window.Net || !Net.enabled()) return;
+    try {
+      var p = Net.postFeed(kind, save.nickname || "无名散修", target, extra);
+      if (p && p.catch) p.catch(function () {});
+    } catch (e) {}
+  }
+  function paintWorldFeed() {
+    var box = $("world-feed"), list = $("world-feed-list");
+    if (!box || !list) return;
+    if (!worldFeeds.length) { box.hidden = true; return; }
+    box.hidden = false;
+    list.innerHTML = worldFeeds.slice(0, 5).map(function (f) {
+      return '<div class="wf-line">' + feedText(f) + "</div>";
+    }).join("");
+  }
+  function refreshWorldFeed() {
+    if (!window.Net || !Net.enabled()) return;
+    Net.feeds(12).then(function (rows) {
+      if (rows && rows.length) { worldFeeds = rows; paintWorldFeed(); }
+    }).catch(function () {});
+  }
+  function startWorldFeed() {
+    if (wfTimer) return;
+    refreshWorldFeed();
+    wfTimer = setInterval(refreshWorldFeed, 20000);
   }
 
   /* ---------------- 弹幕 ---------------- */
@@ -859,7 +906,13 @@
     if (!run || finished || interacting || paused) return;
     var layer = $("danmaku-layer"); if (!layer) return;
     var d = document.createElement("div"); d.className = "danmaku";
-    d.textContent = D.DANMAKU[Math.floor(Math.random() * D.DANMAKU.length)];
+    if (worldFeeds.length && Math.random() < 0.35) {
+      var wf = worldFeeds[Math.floor(Math.random() * worldFeeds.length)];
+      d.textContent = feedText(wf);
+      d.classList.add("wf-dm");
+    } else {
+      d.textContent = D.DANMAKU[Math.floor(Math.random() * D.DANMAKU.length)];
+    }
     var h = layer.clientHeight || 260;
     d.style.top = (8 + Math.random() * (h - 30)) + "px";
     var dur = 5 + Math.random() * 3;
@@ -1110,6 +1163,7 @@
   /* ---------------- 排行榜 ---------------- */
   var rankTab = "combat";
   var rankMode = (window.Net && Net.enabled()) ? "net" : "local";
+  var netTab = "combat"; /* 天下榜当前维度：combat 战力 / apt 天资 / lvl 修为 / age 长寿 */
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function bindRankMode() {
     var bl = $("rank-mode-local"), bn = $("rank-mode-net");
@@ -1144,19 +1198,34 @@
     });
   }
   function renderNetRank() {
-    $("rank-board").innerHTML = "";
-    var body = $("rank-body"), note = $("rank-note");
+    var body = $("rank-body"), note = $("rank-note"), board = $("rank-board");
     if (!window.Net || !Net.enabled()) {
+      board.innerHTML = "";
       note.textContent = "天下榜未开启";
       body.innerHTML = '<div class="lb-tip">联网天下榜尚未配置。<br>在 net.js 里填入你的 Supabase 项目 url 与 anonKey 后，' +
         '全网修士的战力就会汇聚到这里。</div>';
       return;
     }
-    note.textContent = "天下榜 · 全网修士实时战力（Supabase）";
+    var NTABS = [
+      { id: "combat", name: "⚔ 战力榜", note: "天下榜 · 全网修士实时战力（Supabase）" },
+      { id: "apt",    name: "🌟 天资榜", note: "天资榜 · 按灵根资质高低排序" },
+      { id: "lvl",    name: "🧘 修为榜", note: "修为榜 · 按境界等级高低排序" },
+      { id: "age",    name: "🕯 长寿榜", note: "长寿榜 · 按享年寿元长短排序" }
+    ];
+    board.innerHTML = NTABS.map(function (t) {
+      return '<button class="tab' + (t.id === netTab ? " active" : "") + '" data-ntab="' + t.id + '">' + t.name + "</button>";
+    }).join("");
+    Array.prototype.forEach.call(board.querySelectorAll(".tab"), function (btn) {
+      btn.onclick = function () { netTab = btn.getAttribute("data-ntab"); renderNetRank(); };
+    });
+    var cur = netTab;
+    note.textContent = (NTABS.filter(function (t) { return t.id === cur; })[0] || NTABS[0]).note;
     body.innerHTML = '<div class="lb-tip">正在从天下榜拉取战绩…</div>';
-    Net.top(50).then(function (rows) {
+    Net.top(50, cur).then(function (rows) {
+      if (cur !== netTab) return; /* 已切换维度，丢弃过期结果 */
       if (!rows || !rows.length) { body.innerHTML = '<div class="lb-tip">天下榜还没有人上榜，来做第一个！</div>'; return; }
       var myNick = Net.cleanNick(save.nickname);
+      var combatMode = cur === "combat";
       body.innerHTML = rows.map(function (b, i) {
         var medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : (i + 1);
         var label = esc(b.nickname || "无名散修") + " <span style=\"color:#8fa2c4\">·" + esc(b.root || "") + "</span>" +
@@ -1164,21 +1233,29 @@
           (b.bond === "enemy" ? ' <span class="lb-god" style="color:#ff9b8a;border-color:#5a2b2b">敌</span>' :
            b.bond === "friend" ? ' <span class="lb-god" style="color:#8fe6b0;border-color:#2b5a3f">友</span>' : "");
         var isMe = (b.nickname || "无名散修") === myNick;
-        return '<div class="lb-row' + (i < 3 ? " top top" + (i + 1) : "") + (isMe ? " me" : "") + '">' +
+        var val = combatMode ? Sim.fmtNum(b.combat || 0)
+                : cur === "apt" ? (b.apt || 0) + " 资质"
+                : cur === "lvl" ? (b.lvl || 0) + " 级"
+                : (b.age || 0) + " 岁";
+        var topCls = (combatMode && i < 3) ? " top top" + (i + 1) : "";
+        return '<div class="lb-row' + topCls + (isMe ? " me" : "") + '">' +
           '<span class="lb-pos">' + medal + "</span>" +
           '<span class="lb-name">' + label + "</span>" +
           '<span class="lb-realm">' + esc(b.realm || "") + "·" + (b.lvl || 0) + "级</span>" +
-          '<b class="lb-val">' + Sim.fmtNum(b.combat || 0) + "</b>" +
-          (i < 3 ? '<button class="lb-duel" data-duel="' + i + '">⚔ 去挑战</button>' : "") +
+          '<b class="lb-val">' + val + "</b>" +
+          ((combatMode && i < 3) ? '<button class="lb-duel" data-duel="' + i + '">⚔ 去挑战</button>' : "") +
           "</div>";
       }).join("");
-      Array.prototype.forEach.call(body.querySelectorAll(".lb-duel"), function (btn) {
-        btn.onclick = function () {
-          var idx = parseInt(btn.getAttribute("data-duel"), 10);
-          openDuel(idx, rows[idx]);
-        };
-      });
+      if (combatMode) {
+        Array.prototype.forEach.call(body.querySelectorAll(".lb-duel"), function (btn) {
+          btn.onclick = function () {
+            var idx = parseInt(btn.getAttribute("data-duel"), 10);
+            openDuel(idx, rows[idx]);
+          };
+        });
+      }
     }).catch(function (e) {
+      if (cur !== netTab) return;
       body.innerHTML = '<div class="lb-tip">天下榜拉取失败：' + esc(e && e.message ? e.message : "网络错误") + "<br>请检查 net.js 配置或稍后再试。</div>";
     });
   }
@@ -1303,6 +1380,8 @@
       Net.submit(entry).then(function () {
         if (st) { st.className = "settle-net-status ok"; st.textContent = "已上榜！去 🏆仙榜 → 🌐天下榜 看看你的排名"; }
         sGold(); upBtn.disabled = false;
+        postFeed(entry.ascend ? "ascend" : "upload", "", Sim.fmtNum(entry.combat));
+        refreshWorldFeed();
         var myCombat = entry.combat;
         Net.top(50).then(function (rows) {
           for (var i = 0; i < rows.length && i < 3; i++) {
@@ -1336,12 +1415,15 @@
       bond: function () { if (run) { interacting = false; paused = false; clearTimeout(timer); openBond(); } },
       catchIt: function () { if (run) { interacting = false; paused = false; clearTimeout(timer); openCatch(D.CATCH_ITEMS[0]); } },
       duel: function (i) { interacting = false; paused = false; clearTimeout(timer); openDuel(i || 0, { nickname: "测试榜首", realm: "真仙", lvl: 99, combat: 9999999 }); },
-      coronate: function (p) { coronate(p || 1, save.nickname || "测试道友"); }
+      coronate: function (p) { coronate(p || 1, save.nickname || "测试道友"); },
+      feed: function (k, t, x) { postFeed(k || "upload", t || "", x || ""); setTimeout(refreshWorldFeed, 800); },
+      wf: function () { refreshWorldFeed(); }
     };
   }
 
   seedBoard();
   bind();
   renderHome();
+  startWorldFeed();
   show("view-home");
 })();
