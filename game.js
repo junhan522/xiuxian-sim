@@ -97,6 +97,66 @@
     toastTimer = setTimeout(function () { t.classList.remove("show"); setTimeout(function () { t.hidden = true; }, 300); }, 2400);
   }
 
+  /* ---------------- 庆祝 / 正反馈（非模态、可排队） ---------------- */
+  var FX_COLORS = ["#f5c96b", "#ffd98a", "#b98aff", "#59d68c", "#5aa2ff", "#ff9b8a", "#ffffff"];
+  function spawnConfetti(colors, count) {
+    var layer = $("fx-layer"); if (!layer) return;
+    colors = colors && colors.length ? colors : FX_COLORS;
+    count = count || 46;
+    var ring = document.createElement("div");
+    ring.className = "fx-ring"; layer.appendChild(ring);
+    setTimeout(function () { if (ring.parentNode) ring.parentNode.removeChild(ring); }, 750);
+    for (var i = 0; i < count; i++) {
+      (function () {
+        var p = document.createElement("div");
+        p.className = "fx-confetti";
+        var left = Math.random() * 100;
+        var drift = (Math.random() * 160 - 80).toFixed(0) + "px";
+        var spin = (Math.random() * 900 + 360).toFixed(0) + "deg";
+        var dur = (Math.random() * 1.4 + 1.5).toFixed(2) + "s";
+        var delay = (Math.random() * 0.35).toFixed(2) + "s";
+        p.style.left = left + "vw";
+        p.style.background = colors[Math.floor(Math.random() * colors.length)];
+        p.style.setProperty("--drift", drift);
+        p.style.setProperty("--spin", spin);
+        p.style.animationDuration = dur;
+        p.style.animationDelay = delay;
+        if (Math.random() < 0.3) p.style.borderRadius = "50%";
+        layer.appendChild(p);
+        var life = (parseFloat(dur) + parseFloat(delay)) * 1000 + 200;
+        setTimeout(function () { if (p.parentNode) p.parentNode.removeChild(p); }, life);
+      })();
+    }
+  }
+  var celebQueue = [], celebBusy = false, celebTimer = null;
+  function celebrate(opts) {
+    if (!opts) return;
+    celebQueue.push(opts);
+    if (!celebBusy) nextCelebrate();
+  }
+  function nextCelebrate() {
+    var box = $("celebrate");
+    if (!box || !celebQueue.length) { celebBusy = false; return; }
+    celebBusy = true;
+    clearTimeout(celebTimer);
+    var o = celebQueue.shift();
+    $("celebrate-icon").textContent = o.icon || "✨";
+    $("celebrate-title").textContent = o.title || "";
+    $("celebrate-sub").innerHTML = o.sub || "";
+    var prog = $("celebrate-prog");
+    if (o.prog) { prog.hidden = false; $("celebrate-prog-txt").textContent = o.prog; }
+    else prog.hidden = true;
+    box.classList.remove("hide");
+    box.hidden = false;
+    try { sGold(); } catch (e) {}
+    spawnConfetti(o.colors, o.count);
+    var dur = o.dur || 2200;
+    celebTimer = setTimeout(function () {
+      box.classList.add("hide");
+      setTimeout(function () { box.hidden = true; box.classList.remove("hide"); nextCelebrate(); }, 360);
+    }, dur);
+  }
+
   /* ---------------- 视图 ---------------- */
   var views = ["view-home", "view-game", "view-settle", "view-rank", "view-ach", "view-codex", "view-settings", "view-about"];
   function show(id) {
@@ -155,9 +215,9 @@
   function streakBonus() { return Math.min(3, (save.streak.n || 0) * 0.3); }
 
   /* ---------------- 图鉴收集 ---------------- */
-  function recordRoot(name) { if (!name) return; save.codex.roots[name] = (save.codex.roots[name] || 0) + 1; persist(); }
-  function recordXY(name) { if (!name) return; save.codex.xy[name] = (save.codex.xy[name] || 0) + 1; persist(); }
-  function recordLG(name) { if (!name) return; save.codex.lg[name] = true; persist(); }
+  function recordRoot(name) { if (!name) return false; var isNew = !save.codex.roots[name]; save.codex.roots[name] = (save.codex.roots[name] || 0) + 1; persist(); return isNew; }
+  function recordXY(name) { if (!name) return false; var isNew = !save.codex.xy[name]; save.codex.xy[name] = (save.codex.xy[name] || 0) + 1; persist(); return isNew; }
+  function recordLG(name) { if (!name) return false; var isNew = !save.codex.lg[name]; save.codex.lg[name] = true; persist(); return isNew; }
   function codexProgress() {
     var total = 0, got = 0, apt, i;
     for (apt = 1; apt <= 10; apt++) {
@@ -269,7 +329,7 @@
     run.seed = seed; run.chalTarget = chalTarget;
     run.rivalShown = 0; run.passedBots = {};
     /* 图鉴：记录本次觉醒的灵根 */
-    recordRoot(run.root);
+    run.newRoot = recordRoot(run.root);
     finished = false; paused = false; interacting = false;
     $("log-box").innerHTML = "";
     $("combo-badge").hidden = true;
@@ -279,6 +339,15 @@
     openAwaken(function () {
       appendLog(run.log[0]);
       startDanmaku();
+      if (run.newRoot) {
+        var cx = codexProgress();
+        celebrate({
+          icon: "🌱", title: "图鉴点亮 · " + run.root,
+          sub: "首次觉醒此灵根，已录入仙途图鉴",
+          prog: "图鉴收集 " + cx.got + " / " + cx.total,
+          colors: ["#f5c96b", "#ffd98a", "#59d68c", "#ffffff"], count: 40, dur: 2400
+        });
+      }
       loop();
     });
   }
@@ -358,7 +427,7 @@
       if (pending && pending.kind === "choice") { openChoice(pending.choice); return; }
       if (pending && pending.kind === "catch") { openCatch(pending.item); return; }
       if (run.tribYear) { openTrib(); return; }
-      if (Sim.realmOf(run.lvl) >= 2 && run.age - (run.lastInteractAge || 0) >= Sim.interactCd(run.lvl) && Sim.rnd() < 0.008) {
+      if (Sim.realmOf(run.lvl) >= 2 && run.age - (run.lastInteractAge || 0) >= Sim.interactCd(run.lvl) && Sim.rnd() < 0.004) {
         run.lastInteractAge = run.age; openDemon(); return;
       }
       loop();
@@ -549,7 +618,7 @@
       if (t <= 0) { end(false); return; }
       tribRaf = requestAnimationFrame(tick);
     }
-    function onTap(e) { if (e) e.preventDefault(); prog = Math.min(100, prog + info.click); sTick(); draw(); }
+    function onTap(e) { if (e) e.preventDefault(); prog = Math.min(100, prog + info.click); sTick(); draw(); if (prog >= 100) { end(true); } }
     tap.addEventListener("pointerdown", onTap);
     tap.onclick = function () {}; /* 占位，pointerdown 已处理 */
     tribRaf = requestAnimationFrame(tick);
@@ -560,12 +629,12 @@
   /* ---------------- 心魔来袭（狂点凝神） ---------------- */
   function openDemon() {
     interacting = true;
-    var prog = 0, t = 3.0, drain = 22, click = 9, ended = false;
+    var prog = 0, t = 4.5, drain = 9, click = 13, ended = false;
     var mask = $("demon-mask"); mask.hidden = false;
     var res = $("demon-result"); res.hidden = true;
     var tap = $("btn-demon-tap"); tap.hidden = false;
     var realm = Sim.realmOf(run.lvl);
-    var loss = Math.max(4, Math.round(run.lifeMax * (0.05 + realm * 0.01)));
+    var loss = Math.max(2, Math.round(run.lifeMax * (0.02 + realm * 0.004)));
     var last = performance.now();
     function draw() {
       $("demon-fill").style.width = Math.max(0, Math.min(100, prog)) + "%";
@@ -577,7 +646,7 @@
       res.hidden = false; tap.hidden = true;
       var entry;
       if (win) {
-        var ap = Sim.applyEff(run, { xp: [30, 64], combat: [0.06, 0.14] });
+        var ap = Sim.applyEff(run, { xp: [55, 120], combat: [0.1, 0.24], life: [8, 20] });
         res.style.color = "var(--green)";
         res.innerHTML = "🧘 道心重归清明，因祸得福" + (ap || "");
         entry = { age: run.age, type: "good", text: "斩灭心魔，道心通透" + (ap || "") };
@@ -605,7 +674,7 @@
       if (t <= 0) { end(false); return; }
       demonRaf = requestAnimationFrame(tick);
     }
-    function onTap(e) { if (e) e.preventDefault(); prog = Math.min(100, prog + click); sTick(); draw(); }
+    function onTap(e) { if (e) e.preventDefault(); prog = Math.min(100, prog + click); sTick(); draw(); if (prog >= 100) { end(true); } }
     tap.addEventListener("pointerdown", onTap);
     demonRaf = requestAnimationFrame(tick);
   }
@@ -643,7 +712,8 @@
     var exp = Sim.runExp(run);
     save.runs++;
     if (run.ascended) save.ascends++;
-    if (run.xianyuan) { save.everXianyuan = true; recordXY(run.xianyuan.name); }
+    var newXY = false;
+    if (run.xianyuan) { save.everXianyuan = true; newXY = recordXY(run.xianyuan.name); }
     if (dailyMode) { save.daily = { date: dateStr(), done: true }; }
 
     save.playerExp += exp;
@@ -746,9 +816,28 @@
 
     renderLegacyPick();
     show("view-settle");
-    if (leveledUp) toast("🎉 玩家等级提升！当前 Lv." + save.playerLv + "（高阶灵根 +" + (save.playerLv * 0.1).toFixed(1) + "%）");
-    newly.forEach(function (a, i) {
-      setTimeout(function () { toast("⭐ 达成成就【" + a.name + "】 高阶灵根概率 +" + a.bonus + "%"); sGold(); }, 600 + i * 1700);
+    if (newXY) {
+      var cxy = codexProgress();
+      celebrate({
+        icon: "✨", title: "仙缘入册 · " + run.xianyuan.name,
+        sub: "首获此仙缘，增幅 ×" + run.xianyuan.rate + "，已录入图鉴",
+        prog: "图鉴收集 " + cxy.got + " / " + cxy.total,
+        colors: ["#b98aff", "#f5c96b", "#ffffff"], count: 50, dur: 2400
+      });
+    }
+    if (leveledUp) {
+      celebrate({
+        icon: "🎉", title: "玩家等级提升 Lv." + save.playerLv,
+        sub: "高阶灵根概率 +" + (save.playerLv * 0.1).toFixed(1) + "%，越肝越强！",
+        colors: ["#f5c96b", "#ffd98a", "#5aa2ff", "#ffffff"], count: 50, dur: 2400
+      });
+    }
+    newly.forEach(function (a) {
+      celebrate({
+        icon: "⭐", title: "达成成就 · " + a.name,
+        sub: (a.desc || "") + "<br>高阶灵根概率 +" + a.bonus + "%",
+        colors: ["#f5c96b", "#ffd98a", "#ffffff"], count: 44, dur: 2400
+      });
     });
   }
 
@@ -769,8 +858,18 @@
         c.classList.add("picked"); c.style.opacity = "1";
         var lgObj = {}; lgObj[lg.key] = true;
         save.legacy = lgObj; persist(); sGold();
-        recordLG(lg.name);
-        toast("🕯 已铭刻遗泽【" + lg.name + "】，将带入下一世");
+        var newLG = recordLG(lg.name);
+        if (newLG) {
+          var clg = codexProgress();
+          celebrate({
+            icon: "🕯", title: "遗泽入册 · " + lg.name,
+            sub: lg.desc + "<br>首次铭刻此遗泽，将带入下一世",
+            prog: "图鉴收集 " + clg.got + " / " + clg.total,
+            colors: ["#b98aff", "#f5c96b", "#ffffff"], count: 44, dur: 2400
+          });
+        } else {
+          toast("🕯 已铭刻遗泽【" + lg.name + "】，将带入下一世");
+        }
       };
       cards.appendChild(c);
     });

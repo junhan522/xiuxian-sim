@@ -419,3 +419,81 @@ body {
 .settle-chal { margin: 8px 0; font-size: 14px; color: var(--gold2); font-weight: 700; }
 .settle-chal.win { color: var(--green); }
 .settle-chal.lose { color: var(--red); }
+
+/* ================= 庆祝 / 正反馈系统 ================= */
+/* 粒子层：铺满全屏，不拦截点击 */
+.fx-layer {
+  position: fixed; inset: 0; z-index: 1200; pointer-events: none; overflow: hidden;
+}
+.fx-confetti {
+  position: absolute; top: -14px; width: 9px; height: 14px; border-radius: 2px;
+  opacity: 0.95; will-change: transform, opacity;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  0%   { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translate3d(var(--drift, 0px), 110vh, 0) rotate(var(--spin, 720deg)); opacity: 0; }
+}
+/* 冲击波光环 */
+.fx-ring {
+  position: absolute; left: 50%; top: 42%; width: 40px; height: 40px; margin: -20px 0 0 -20px;
+  border-radius: 50%; border: 3px solid var(--gold2); pointer-events: none;
+  animation: fxRing 0.7s ease-out forwards;
+}
+@keyframes fxRing {
+  0%   { transform: scale(0.3); opacity: 0.9; }
+  100% { transform: scale(9);   opacity: 0; }
+}
+
+/* 庆祝横幅卡片 */
+.celebrate {
+  position: fixed; inset: 0; z-index: 1201; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.celebrate-card {
+  position: relative; min-width: 240px; max-width: 320px; padding: 26px 30px 22px;
+  text-align: center; border-radius: 20px; overflow: hidden;
+  background: radial-gradient(circle at 50% 0%, #2b3652, #161d2b 70%);
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 40px rgba(245, 201, 107, 0.55), 0 12px 40px rgba(0, 0, 0, 0.6);
+  animation: celebrateIn 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+}
+.celebrate.hide .celebrate-card { animation: celebrateOut 0.35s ease forwards; }
+@keyframes celebrateIn {
+  0%   { transform: scale(0.5) translateY(20px); opacity: 0; }
+  60%  { transform: scale(1.06) translateY(0); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+@keyframes celebrateOut {
+  0%   { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.85) translateY(-16px); opacity: 0; }
+}
+.celebrate-glow {
+  position: absolute; left: 50%; top: -60px; width: 260px; height: 260px; margin-left: -130px;
+  border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(245, 201, 107, 0.55), rgba(245, 201, 107, 0) 65%);
+  animation: celebrateGlow 1.6s ease-in-out infinite;
+}
+@keyframes celebrateGlow { 0%,100% { opacity: 0.5; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.15); } }
+/* 流光扫过 */
+.celebrate-card::after {
+  content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+  background: linear-gradient(100deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 100%);
+  transform: skewX(-18deg); animation: shimmerSweep 1.5s ease-in-out infinite; pointer-events: none;
+}
+@keyframes shimmerSweep { 0% { left: -60%; } 55%,100% { left: 130%; } }
+
+.celebrate-icon {
+  position: relative; font-size: 52px; line-height: 1; margin-bottom: 10px;
+  filter: drop-shadow(0 0 14px rgba(245, 201, 107, 0.8));
+  animation: celebratePulse 1s ease-in-out infinite;
+}
+@keyframes celebratePulse { 0%,100% { transform: scale(1) rotate(-3deg); } 50% { transform: scale(1.18) rotate(3deg); } }
+.celebrate-title {
+  position: relative; font-size: 22px; font-weight: 800; letter-spacing: 1px;
+  background: linear-gradient(180deg, #fff6df, var(--gold) 60%, #d79b32);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.celebrate-sub { position: relative; margin-top: 8px; font-size: 13px; color: var(--sub); line-height: 1.6; }
+.celebrate-prog { position: relative; margin-top: 12px; font-size: 12px; color: var(--green); font-weight: 700; }
