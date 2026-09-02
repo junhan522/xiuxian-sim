@@ -18,6 +18,12 @@
   function pick(arr) { return arr[Math.floor(rng() * arr.length)]; }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
+  /* 交互冷却：任意两次「弹窗交互」（抉择/机缘/心魔/炼丹）之间的最小岁数间隔，
+   * 避免流年被频繁打断。随境界提升而拉长——高境界寿命动辄上千载，
+   * 若用固定间隔会导致弹窗密集，故按境界缩放。 */
+  var INTERACT_CD = 48;
+  function interactCd(lvl) { return INTERACT_CD + realmOf(lvl) * 24; }
+
   /* 字符串 → 32bit 种子 */
   function hashStr(str) {
     var h = 2166136261 >>> 0;
@@ -128,6 +134,7 @@
       tribYear: false,
       lastChoiceAge: 0,
       lastCatchAge: 0,
+      lastInteractAge: 0,
       beatRival: false,
       rival: null,
       log: []
@@ -224,21 +231,23 @@
     }
 
     if (!silentRival) {
+      /* 交互冷却（随境界缩放），保证流年不被频繁打断 */
+      var cd = interactCd(s.lvl);
       /* 抉择事件：暂停流年，二选一 */
-      if (s.age - (s.lastChoiceAge || 0) >= 14 && rng() < 0.16) {
+      if (s.age - (s.lastInteractAge || 0) >= cd && rng() < 0.04) {
         var pool = D.CHOICES.filter(function (c) { return s.lvl >= c.min && s.lvl <= c.max; });
         if (pool.length) {
           var ch = pick(pool);
-          s.lastChoiceAge = s.age;
+          s.lastChoiceAge = s.age; s.lastInteractAge = s.age;
           logs.push({ age: s.age, type: "choice", choice: ch, text: "【" + ch.title + "】" + ch.text });
           return logs;
         }
       }
       /* 天降机缘：限时点击接取 */
-      var catchP = 0.05 * (has(s.legacy, "fuYun") ? 2 : 1);
-      if (s.age - (s.lastCatchAge || 0) >= 8 && rng() < catchP) {
+      var catchP = 0.032 * (has(s.legacy, "fuYun") ? 1.8 : 1);
+      if (s.age - (s.lastInteractAge || 0) >= cd && rng() < catchP) {
         var item = pick(D.CATCH_ITEMS);
-        s.lastCatchAge = s.age;
+        s.lastCatchAge = s.age; s.lastInteractAge = s.age;
         logs.push({ age: s.age, type: "catch", item: item, text: "天边一道流光坠落——是「" + item.name + "」！快接住它！" });
         return logs;
       }
@@ -335,6 +344,20 @@
 
   function applyEvent(s, ev) { return applyEff(s, ev.eff); }
 
+  /* ---------- 交互小游戏奖励放大：只放大「正向」区间，惩罚不变 ---------- */
+  var CHOICE_REWARD_MUL = 2.0;   /* 两难抉择 */
+  var CATCH_REWARD_MUL = 2.4;    /* 天降机缘 */
+  function boostEff(eff, mul) {
+    if (!eff) return eff;
+    var out = {};
+    Object.keys(eff).forEach(function (k) {
+      var v = eff[k];
+      if (Array.isArray(v) && v[1] > 0) out[k] = [v[0] * mul, v[1] * mul];
+      else out[k] = v;
+    });
+    return out;
+  }
+
   /* ---------- 抉择结算 ---------- */
   function resolveChoice(s, choice, optIdx) {
     var opt = choice.opts[clamp(optIdx | 0, 0, choice.opts.length - 1)];
@@ -344,14 +367,14 @@
     var r = rng() * total, acc = 0, chosen = outs[outs.length - 1];
     for (i = 0; i < outs.length; i++) { acc += outs[i].p; if (r < acc) { chosen = outs[i]; break; } }
     s.choicesMade++;
-    var applied = applyEff(s, chosen.eff);
+    var applied = applyEff(s, boostEff(chosen.eff, CHOICE_REWARD_MUL));
     return { opt: opt, outcome: chosen, applied: applied };
   }
 
   /* ---------- 天降机缘：接住 / 错失 ---------- */
   function catchItem(s, item) {
     s.caught++;
-    var applied = applyEff(s, item.eff);
+    var applied = applyEff(s, boostEff(item.eff, CATCH_REWARD_MUL));
     return applied;
   }
   function missCatch(s, item) {
@@ -395,6 +418,7 @@
 
   return {
     setRng: setRng, rnd: function () { return rng(); }, hashStr: hashStr, mulberry32: mulberry32,
+    INTERACT_CD: INTERACT_CD, interactCd: interactCd,
     drawRoot: drawRoot, breakChance: breakChance, combatOf: combatOf,
     realmOf: realmOf, stageName: stageName, fmtNum: fmtNum,
     newRun: newRun, stepYear: stepYear, runExp: runExp,

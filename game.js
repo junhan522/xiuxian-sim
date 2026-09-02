@@ -17,6 +17,12 @@
         if (!s.legacy) s.legacy = null;
         if (s.danmaku === undefined) s.danmaku = true;
         if (!s.daily) s.daily = { date: "", done: false };
+        if (!s.codex) s.codex = { roots: {}, xy: {}, lg: {} };
+        if (!s.codex.roots) s.codex.roots = {};
+        if (!s.codex.xy) s.codex.xy = {};
+        if (!s.codex.lg) s.codex.lg = {};
+        if (!s.streak) s.streak = { last: "", n: 0 };
+        if (!s.chal) s.chal = { w: 0, l: 0 };
         return s;
       }
     } catch (e) {}
@@ -27,7 +33,10 @@
       sound: true, speed: 0.1, danmaku: true,
       everXianyuan: false,
       legacy: null,                 /* { key: true } 转世遗泽 */
-      daily: { date: "", done: false }
+      daily: { date: "", done: false },
+      codex: { roots: {}, xy: {}, lg: {} },   /* 图鉴收集 */
+      streak: { last: "", n: 0 },             /* 连续签到 */
+      chal: { w: 0, l: 0 }                    /* 挑战码战绩 */
     };
   }
   function persist() { try { localStorage.setItem(STORE_KEY, JSON.stringify(save)); } catch (e) {} }
@@ -89,7 +98,7 @@
   }
 
   /* ---------------- 视图 ---------------- */
-  var views = ["view-home", "view-game", "view-settle", "view-rank", "view-ach", "view-settings", "view-about"];
+  var views = ["view-home", "view-game", "view-settle", "view-rank", "view-ach", "view-codex", "view-settings", "view-about"];
   function show(id) {
     views.forEach(function (v) { $(v).classList.toggle("active", v === id); });
     window.scrollTo(0, 0);
@@ -116,27 +125,151 @@
     var today = dateStr();
     $("daily-tip").textContent = save.daily.date === today && save.daily.done
       ? "今日命格已挑战 · 明日再来" : "今日全体修士同一命格，来比比谁更强";
+    /* 连续签到 */
+    updateStreak();
+    var st = $("home-streak");
+    if (save.streak.n > 0) {
+      st.hidden = false;
+      st.innerHTML = "🔥 连续签到 <b>" + save.streak.n + "</b> 天<span class=\"streak-bonus\">高阶灵根 +" + streakBonus().toFixed(1) + "%</span>";
+    } else st.hidden = true;
+    /* 图鉴 / 挑战码按钮提示 */
+    var cx = codexProgress();
+    $("codex-tip").textContent = "已收集 " + cx.got + " / " + cx.total;
+    $("chal-tip").textContent = save.chal.w + save.chal.l > 0
+      ? ("挑战战绩 " + save.chal.w + " 胜 " + save.chal.l + " 负") : "同参一战，比拼战力";
   }
   function dateStr(d) {
     d = d || new Date();
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   }
 
+  /* ---------------- 连续签到 ---------------- */
+  function updateStreak() {
+    var today = dateStr();
+    if (save.streak.last === today) return;
+    var yest = dateStr(new Date(Date.now() - 86400000));
+    save.streak.n = (save.streak.last === yest) ? (save.streak.n + 1) : 1;
+    save.streak.last = today;
+    persist();
+  }
+  function streakBonus() { return Math.min(3, (save.streak.n || 0) * 0.3); }
+
+  /* ---------------- 图鉴收集 ---------------- */
+  function recordRoot(name) { if (!name) return; save.codex.roots[name] = (save.codex.roots[name] || 0) + 1; persist(); }
+  function recordXY(name) { if (!name) return; save.codex.xy[name] = (save.codex.xy[name] || 0) + 1; persist(); }
+  function recordLG(name) { if (!name) return; save.codex.lg[name] = true; persist(); }
+  function codexProgress() {
+    var total = 0, got = 0, apt, i;
+    for (apt = 1; apt <= 10; apt++) {
+      var g = D.ROOTS[apt] || [];
+      for (i = 0; i < g.length; i++) { total++; if (save.codex.roots[g[i]]) got++; }
+    }
+    for (i = 0; i < D.XIAN_YUAN.length; i++) { total++; if (save.codex.xy[D.XIAN_YUAN[i].name]) got++; }
+    for (i = 0; i < D.LEGACIES.length; i++) { total++; if (save.codex.lg[D.LEGACIES[i].name]) got++; }
+    return { got: got, total: total };
+  }
+  var codexTab = "root";
+  function renderCodex() {
+    var prog = codexProgress();
+    $("codex-total").textContent = "收集进度：" + prog.got + " / " + prog.total;
+    var tabs = [{ id: "root", name: "🌱 灵根" }, { id: "xy", name: "✨ 仙缘" }, { id: "lg", name: "🕯 遗泽" }];
+    $("codex-tabs").innerHTML = tabs.map(function (t) {
+      return '<button class="codex-tab' + (t.id === codexTab ? " active" : "") + '" data-tab="' + t.id + '">' + t.name + "</button>";
+    }).join("");
+    Array.prototype.forEach.call($("codex-tabs").querySelectorAll(".codex-tab"), function (btn) {
+      btn.onclick = function () { codexTab = btn.getAttribute("data-tab"); renderCodex(); };
+    });
+    var body = $("codex-body"), html = "", apt, i;
+    if (codexTab === "root") {
+      for (apt = 1; apt <= 10; apt++) {
+        var g = D.ROOTS[apt] || [];
+        html += '<div class="codex-group-title">资质 ' + apt + " · " + D.APT_TITLES[apt] + "</div><div class=\"codex-grid\">";
+        for (i = 0; i < g.length; i++) {
+          var c = save.codex.roots[g[i]] || 0;
+          html += '<div class="codex-card' + (c ? " got" : " locked") + '">' +
+            '<div class="cx-name">' + (c ? g[i] : "？？？") + "</div>" +
+            '<div class="cx-count">' + (c ? "已觉醒 ×" + c : "未收集") + "</div></div>";
+        }
+        html += "</div>";
+      }
+    } else if (codexTab === "xy") {
+      html += '<div class="codex-group-title">仙缘（90 级后天降，渡劫可走引仙台）</div><div class="codex-grid">';
+      for (i = 0; i < D.XIAN_YUAN.length; i++) {
+        var xy = D.XIAN_YUAN[i], cxy = save.codex.xy[xy.name] || 0;
+        html += '<div class="codex-card' + (cxy ? " got" : " locked") + '">' +
+          '<div class="cx-name">' + (cxy ? xy.name : "？？？") + "</div>" +
+          '<div class="cx-count">' + (cxy ? "增幅 ×" + xy.rate + " · 得 ×" + cxy : "未收集") + "</div></div>";
+      }
+      html += "</div>";
+    } else {
+      html += '<div class="codex-group-title">转世遗泽（结算三选一，带入下一世）</div><div class="codex-grid">';
+      for (i = 0; i < D.LEGACIES.length; i++) {
+        var lg = D.LEGACIES[i], clg = !!save.codex.lg[lg.name];
+        html += '<div class="codex-card' + (clg ? " got" : " locked") + '">' +
+          '<div class="cx-name">' + lg.name + "</div>" +
+          '<div class="cx-count">' + (clg ? lg.desc : "未铭刻") + "</div></div>";
+      }
+      html += "</div>";
+    }
+    body.innerHTML = html;
+  }
+
+  /* ---------------- 挑战码（异步 PK） ---------------- */
+  function finalCombatOf(r) {
+    if (!r) return 0;
+    return r.ascended ? (r.finalCombat || Sim.combatOf(r)) : Sim.combatOf(r);
+  }
+  function makeChalCode() { return run.seed + "-" + finalCombatOf(run); }
+  function parseChalCode(str) {
+    if (!str) return null;
+    var s = String(str).trim().toUpperCase();
+    var idx = s.lastIndexOf("-");
+    if (idx < 0) return null;
+    var seed = s.slice(0, idx), score = s.slice(idx + 1);
+    if (!/^[A-Z0-9]{4,8}$/.test(seed)) return null;
+    if (!/^\d+$/.test(score)) return null;
+    var n = parseInt(score, 10);
+    if (!(n > 0)) return null;
+    return { seed: seed, score: n };
+  }
+  function openChallenge() {
+    $("chal-input").value = "";
+    $("chal-record").innerHTML = save.chal.w + save.chal.l > 0
+      ? ('当前挑战战绩：<span class="win">' + save.chal.w + " 胜</span> · <span class=\"lose\">" + save.chal.l + " 负</span>")
+      : "还没有挑战记录，粘贴好友挑战码开战吧！";
+    $("challenge-mask").hidden = false;
+  }
+  function copyText(txt, okMsg) {
+    function ok() { toast(okMsg || "📋 已复制到剪贴板"); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = txt; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); ok(); } catch (e) { toast(txt); }
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fallback);
+    else fallback();
+  }
+
   /* ---------------- 游戏主循环 ---------------- */
   var run = null, timer = null, paused = false, finished = false, interacting = false;
   var catchTimer = null, tribRaf = null, demonRaf = null, awakenRaf = null, dmTimer = null;
-  var dailyMode = false;
+  var dailyMode = false, chalMode = false, chalTarget = 0;
 
-  function startGame(mode) {
+  function startGame(mode, seedOverride, targetScore) {
     dailyMode = (mode === "daily");
-    if (dailyMode) {
-      var today = dateStr();
-      Sim.setRng(Sim.mulberry32(Sim.hashStr("XXSIM-DAILY-" + today)));
-    } else {
-      Sim.setRng(Math.random);
-    }
-    run = Sim.newRun(save.playerLv, achBonus(), { legacy: save.legacy || {} });
+    chalMode = (mode === "challenge");
+    chalTarget = chalMode ? (targetScore || 0) : 0;
+    var seed;
+    if (chalMode && seedOverride) seed = seedOverride;
+    else if (dailyMode) seed = "XXSIM-DAILY-" + dateStr();
+    else seed = randSeedStr();
+    Sim.setRng(Sim.mulberry32(Sim.hashStr(seed)));
+    run = Sim.newRun(save.playerLv, achBonus() + streakBonus(), { legacy: save.legacy || {} });
+    run.seed = seed; run.chalTarget = chalTarget;
     run.rivalShown = 0; run.passedBots = {};
+    /* 图鉴：记录本次觉醒的灵根 */
+    recordRoot(run.root);
     finished = false; paused = false; interacting = false;
     $("log-box").innerHTML = "";
     $("combo-badge").hidden = true;
@@ -148,6 +281,13 @@
       startDanmaku();
       loop();
     });
+  }
+
+  /* 随机种子串（普通局每局不同；挑战码复用同一串以还原命格） */
+  function randSeedStr() {
+    var s = Math.random().toString(36).slice(2, 8).toUpperCase();
+    while (s.length < 5) s += "X";
+    return s.slice(0, 5);
   }
 
   function renderAttrs() {
@@ -218,7 +358,9 @@
       if (pending && pending.kind === "choice") { openChoice(pending.choice); return; }
       if (pending && pending.kind === "catch") { openCatch(pending.item); return; }
       if (run.tribYear) { openTrib(); return; }
-      if (Sim.realmOf(run.lvl) >= 2 && Sim.rnd() < 0.04) { openDemon(); return; }
+      if (Sim.realmOf(run.lvl) >= 2 && run.age - (run.lastInteractAge || 0) >= Sim.interactCd(run.lvl) && Sim.rnd() < 0.008) {
+        run.lastInteractAge = run.age; openDemon(); return;
+      }
       loop();
     }, save.speed * 1000);
   }
@@ -435,7 +577,7 @@
       res.hidden = false; tap.hidden = true;
       var entry;
       if (win) {
-        var ap = Sim.applyEff(run, { xp: [12, 30] });
+        var ap = Sim.applyEff(run, { xp: [30, 64], combat: [0.06, 0.14] });
         res.style.color = "var(--green)";
         res.innerHTML = "🧘 道心重归清明，因祸得福" + (ap || "");
         entry = { age: run.age, type: "good", text: "斩灭心魔，道心通透" + (ap || "") };
@@ -501,7 +643,7 @@
     var exp = Sim.runExp(run);
     save.runs++;
     if (run.ascended) save.ascends++;
-    if (run.xianyuan) save.everXianyuan = true;
+    if (run.xianyuan) { save.everXianyuan = true; recordXY(run.xianyuan.name); }
     if (dailyMode) { save.daily = { date: dateStr(), done: true }; }
 
     save.playerExp += exp;
@@ -566,6 +708,19 @@
       sr.innerHTML = "😤 宿敌「" + run.rival.name + "」这一世胜过你（他终 " + run.rival.finalLvl + " 级" + (run.rival.ascended ? "·已飞升" : "") + "），来世再战！";
     }
 
+    /* 挑战码结果（异步 PK） */
+    var sc = $("settle-chal");
+    if (chalMode && run.chalTarget > 0) {
+      var win = finalCombat > run.chalTarget;
+      if (win) save.chal.w++; else save.chal.l++;
+      persist();
+      sc.hidden = false;
+      sc.className = "settle-chal " + (win ? "win" : "lose");
+      sc.innerHTML = (win ? "🏆 挑战成功！" : "💀 挑战失败…") +
+        " 你的战力 <b>" + Sim.fmtNum(finalCombat) + "</b> vs 对手 <b>" + Sim.fmtNum(run.chalTarget) + "</b>" +
+        "（战绩 " + save.chal.w + " 胜 " + save.chal.l + " 负）";
+    } else { sc.hidden = true; }
+
     /* 后悔钩子 */
     var rg = $("settle-regret");
     if (!run.ascended) {
@@ -614,6 +769,7 @@
         c.classList.add("picked"); c.style.opacity = "1";
         var lgObj = {}; lgObj[lg.key] = true;
         save.legacy = lgObj; persist(); sGold();
+        recordLG(lg.name);
         toast("🕯 已铭刻遗泽【" + lg.name + "】，将带入下一世");
       };
       cards.appendChild(c);
@@ -630,21 +786,22 @@
   /* ---------------- 炫耀战绩 ---------------- */
   function shareRun() {
     if (!run) return;
-    var finalCombat = run.ascended ? (run.finalCombat || Sim.combatOf(run)) : Sim.combatOf(run);
+    var finalCombat = finalCombatOf(run);
     var beat = (run.ascended && !run.rival.ascended) || run.lvl > run.rival.finalLvl;
     var txt = "我在《修仙模拟器》觉醒「" + run.root + "」（资质 " + run.apt + "），修至 " + run.lvl + " 级·" +
       D.REALMS[Sim.realmOf(run.lvl)] + (run.ascended ? "，白日飞升！" : "。") +
       " 战力 " + Sim.fmtNum(finalCombat) + "，" + (beat ? "一世碾压宿敌「" + run.rival.name + "」！" : "惜败宿敌「" + run.rival.name + "」。") +
       " 你能成仙吗？";
-    function ok() { toast("📣 战绩已复制，快去粘贴炫耀！"); }
-    function fallback() {
-      var ta = document.createElement("textarea");
-      ta.value = txt; document.body.appendChild(ta); ta.select();
-      try { document.execCommand("copy"); ok(); } catch (e) { toast(txt); }
-      document.body.removeChild(ta);
-    }
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fallback);
-    else fallback();
+    copyText(txt, "📣 战绩已复制，快去粘贴炫耀！");
+  }
+
+  /* ---------------- 生成挑战码 ---------------- */
+  function genChallenge() {
+    if (!run) return;
+    var code = makeChalCode();
+    var txt = "【修仙模拟器·挑战码】" + code + " —— 我这一世战力 " + Sim.fmtNum(finalCombatOf(run)) +
+      "，用同一命格来比比谁更强！粘贴到「⚔ 挑战码」即可应战。";
+    copyText(txt, "⚔ 挑战码已复制：" + code);
   }
 
   /* ---------------- 排行榜 ---------------- */
@@ -720,10 +877,20 @@
     $("btn-daily").onclick = function () { startGame("daily"); };
     $("btn-rank").onclick = function () { renderRank(); show("view-rank"); };
     $("btn-ach").onclick = function () { renderAch(); show("view-ach"); };
+    $("btn-codex").onclick = function () { renderCodex(); show("view-codex"); };
+    $("btn-chal").onclick = function () { openChallenge(); };
+    $("btn-chal-close").onclick = function () { $("challenge-mask").hidden = true; };
+    $("btn-chal-go").onclick = function () {
+      var code = parseChalCode($("chal-input").value);
+      if (!code) { $("chal-record").innerHTML = '<span class="lose">挑战码格式有误</span>，应形如 AX3F9-128000'; return; }
+      $("challenge-mask").hidden = true;
+      startGame("challenge", code.seed, code.score);
+    };
     $("btn-settings").onclick = function () { settingsReturn = "home"; bindSettings(); show("view-settings"); };
     $("btn-about").onclick = function () { show("view-about"); };
     $("btn-close-rank").onclick = function () { show("view-home"); renderHome(); };
     $("btn-close-ach").onclick = function () { show("view-home"); renderHome(); };
+    $("btn-close-codex").onclick = function () { show("view-home"); renderHome(); };
     $("btn-close-about").onclick = function () { show("view-home"); renderHome(); };
     $("btn-close-settings").onclick = function () {
       if (settingsReturn === "pause" && run && !finished) {
@@ -748,6 +915,7 @@
     $("btn-settle-home").onclick = function () { renderHome(); show("view-home"); };
     $("btn-settle-review").onclick = openReview;
     $("btn-settle-share").onclick = shareRun;
+    $("btn-settle-challenge").onclick = genChallenge;
     $("btn-review-close").onclick = function () { $("review-mask").hidden = true; };
   }
 

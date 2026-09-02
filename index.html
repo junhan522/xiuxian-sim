@@ -18,6 +18,7 @@
         <div class="home-sub">——看看你能不能成为白日飞升的那一个？——</div>
       </div>
       <div class="home-count">已有 <b id="home-count">--</b> 位修士觉醒灵根 · 已有 <b id="home-ascend-count">--</b> 位修士飞升成仙</div>
+      <div class="home-streak" id="home-streak" hidden></div>
       <div class="home-lv">
         <div class="lv-head">
           <span class="lv-name">玩家等级</span>
@@ -35,6 +36,16 @@
         <button class="btn btn-big btn-daily" id="btn-daily">
           <span>🎲 每日同参</span>
           <span class="daily-tip" id="daily-tip">今日全体修士同一命格，来比比谁更强</span>
+        </button>
+      </div>
+      <div class="home-chal-row">
+        <button class="btn btn-big" id="btn-chal">
+          <span>⚔ 挑战码</span>
+          <span class="chal-tip" id="chal-tip">同参一战，比拼战力</span>
+        </button>
+        <button class="btn btn-big" id="btn-codex">
+          <span>📖 图鉴</span>
+          <span class="codex-tip" id="codex-tip">收集灵根·仙缘·遗泽</span>
         </button>
       </div>
       <div class="home-ach-row">
@@ -112,6 +123,7 @@
         <div class="settle-god" id="settle-god" hidden></div>
         <div class="settle-xinwu" id="settle-xinwu" hidden></div>
         <div class="settle-rival" id="settle-rival" hidden></div>
+        <div class="settle-chal" id="settle-chal" hidden></div>
         <div class="settle-regret" id="settle-regret" hidden></div>
         <div class="settle-miss" id="settle-miss" hidden></div>
         <div class="settle-rank" id="settle-rank">--</div>
@@ -122,6 +134,7 @@
         <div class="settle-btns">
           <button class="btn btn-primary btn-big" id="btn-settle-again">再入轮回</button>
           <button class="btn btn-big" id="btn-settle-review">📜 回顾一生</button>
+          <button class="btn btn-big" id="btn-settle-challenge">⚔ 生成挑战码</button>
           <button class="btn btn-big" id="btn-settle-share">📣 炫耀战绩</button>
           <button class="btn btn-big" id="btn-settle-home">返回首页</button>
         </div>
@@ -147,6 +160,17 @@
       </header>
       <div class="ach-total" id="ach-total">成就加成：+0%</div>
       <div class="ach-list" id="ach-list"></div>
+    </section>
+
+    <!-- ============ 图鉴 ============ -->
+    <section id="view-codex" class="view page-view">
+      <header class="page-head">
+        <h2 class="page-title">📖 图鉴</h2>
+        <button class="btn-close" id="btn-close-codex">✕</button>
+      </header>
+      <div class="codex-total" id="codex-total">收集进度：0 / 0</div>
+      <div class="codex-tabs" id="codex-tabs"></div>
+      <div class="codex-body" id="codex-body"></div>
     </section>
 
     <!-- ============ 设置 ============ -->
@@ -256,6 +280,18 @@
         <button class="catch-orb" id="catch-orb">🎁</button>
       </div>
       <div class="catch-result" id="catch-result" hidden></div>
+    </div>
+  </div>
+
+  <!-- ============ 挑战码（异步 PK） ============ -->
+  <div id="challenge-mask" class="mask" hidden>
+    <div class="mask-box chal-box">
+      <div class="mask-title">⚔ 挑战码</div>
+      <div class="mask-info">粘贴好友的挑战码，与其同参一战，比拼最终战力！<br>每局结束后都可生成自己的挑战码。</div>
+      <input type="text" class="chal-input" id="chal-input" placeholder="例如：AX3F9-128000" autocomplete="off">
+      <button class="btn btn-primary" id="btn-chal-go">接受挑战</button>
+      <div class="chal-record" id="chal-record"></div>
+      <button class="btn" id="btn-chal-close">关闭</button>
     </div>
   </div>
 
