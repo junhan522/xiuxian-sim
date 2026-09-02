@@ -109,10 +109,13 @@
   function newRun(playerLv, achBonus, opts) {
     opts = opts || {};
     var legacy = opts.legacy || {};
+    var saga = opts.saga || null;
     var d = drawRoot(playerLv, achBonus, legacy);
     var baseLife = irand(40 + d.apt * 5, 60 + d.apt * 7);
     if (has(legacy, "mingHuo")) baseLife += 25;
     if (has(legacy, "lifeMul")) baseLife = Math.round(baseLife * 1.12);
+    /* 道谊深厚（累世结交道友）→ 寿元绵长 */
+    if (saga && saga.dao > 0) baseLife += Math.round(Math.min(90, saga.dao * 3));
     var startLvl = 1;
     if (has(legacy, "startLvl")) startLvl = 6;
     var s = {
@@ -130,15 +133,23 @@
       caught: 0,
       choicesMade: 0,
       legacy: legacy,
+      saga: saga,
       tribAnnounced: false,
       tribYear: false,
       lastChoiceAge: 0,
       lastCatchAge: 0,
       lastInteractAge: 0,
       beatRival: false,
+      bond: null,
+      bondChosen: false,
+      foeLvl: 1,
       rival: null,
       log: []
     };
+    /* 宿怨未消（累世死敌）→ 起手更狠，带着恨意入世 */
+    if (saga && saga.grudge > 0) {
+      s.combatExtra += Math.round(Math.min(6000, saga.grudge * 150) * (1 + d.apt * 0.06));
+    }
     s.log.push({
       age: 6, type: "awake",
       text: "觉醒「" + d.root + "」，先天资质 " + d.apt + "（" + D.APT_TITLES[d.apt] + "），寿元 " + baseLife + " 年" +
@@ -257,10 +268,22 @@
     var ev = pickEvent(s.lvl, realmOf(s.lvl));
     if (ev) logs.push({ age: s.age, text: ev.text + applyEff(s, ev.eff), type: evType(ev) });
 
+    /* 宿敌羁绊：道友论道 / 死敌压迫（仅作用于玩家） */
+    var rname = s.rival ? s.rival.name : "宿敌";
+    if (s.bond === "friend" && rng() < 0.06) {
+      s.cultBonus += 14;
+      logs.push({ age: s.age, type: "up", text: "与道友「" + rname + "」坐而论道，互证道法，感悟大增" });
+    }
+    if (s.bond === "enemy" && (s.foeLvl || 0) > s.lvl && rng() < 0.08) {
+      logs.push({ age: s.age, type: "rival", text: "被死敌「" + rname + "」甩在身后，你咬碎钢牙，愤而精进！" });
+    }
+
     /* 突破判定：感悟乘算加成；夙世悟性 ×1.06；概率 >30% 允许连破（每次减半，最多 3 次） */
     var broke = 0;
     var p = breakChance(s.apt, s.lvl) * (1 + s.cultBonus / 100);
     if (has(s.legacy, "suZhi")) p *= 1.06;
+    /* 死敌压迫感：落后时怒而突破(+18%)，领先时道心锐利(+6%) */
+    if (s.bond === "enemy") p *= ((s.foeLvl || 0) > s.lvl) ? 1.18 : 1.06;
     while (s.lvl < 99 && p > 0 && broke < 3) {
       if (rng() < p) {
         var oldRealm = realmOf(s.lvl);
@@ -385,7 +408,11 @@
   /* ---------- 渡劫拔河（技能化 QTE） ---------- */
   var TRIB_TIME = 8;    /* 秒 */
   var TRIB_CLICK = 3;   /* 每次点击/按压进度（百分点） */
-  function tribDrain(s) { return Math.max(1.2, (9 - s.apt * 0.55) * (s.xianyuan ? 0.5 : 1)); } /* 每秒流失 */
+  function tribDrain(s) {
+    var d = Math.max(1.2, (9 - s.apt * 0.55) * (s.xianyuan ? 0.5 : 1));
+    if (s.bond === "friend") d = Math.max(1.0, d * 0.85); /* 道友护道，天劫侵蚀减轻 */
+    return d;
+  }
   function tribInfo(s) {
     return { time: TRIB_TIME, click: TRIB_CLICK, drain: tribDrain(s), need: 100 };
   }

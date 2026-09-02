@@ -23,6 +23,8 @@
         if (!s.codex.lg) s.codex.lg = {};
         if (!s.streak) s.streak = { last: "", n: 0 };
         if (!s.chal) s.chal = { w: 0, l: 0 };
+        if (!s.saga) s.saga = { dao: 0, grudge: 0, allies: 0, feuds: 0, slain: 0, lastBond: null, lastName: "" };
+        if (typeof s.nickname !== "string") s.nickname = "";
         return s;
       }
     } catch (e) {}
@@ -36,7 +38,9 @@
       daily: { date: "", done: false },
       codex: { roots: {}, xy: {}, lg: {} },   /* 图鉴收集 */
       streak: { last: "", n: 0 },             /* 连续签到 */
-      chal: { w: 0, l: 0 }                    /* 挑战码战绩 */
+      chal: { w: 0, l: 0 },                   /* 挑战码战绩 */
+      saga: { dao: 0, grudge: 0, allies: 0, feuds: 0, slain: 0, lastBond: null, lastName: "" }, /* 恩怨录（累世） */
+      nickname: ""                            /* 天下榜昵称 */
     };
   }
   function persist() { try { localStorage.setItem(STORE_KEY, JSON.stringify(save)); } catch (e) {} }
@@ -192,6 +196,16 @@
       st.hidden = false;
       st.innerHTML = "🔥 连续签到 <b>" + save.streak.n + "</b> 天<span class=\"streak-bonus\">高阶灵根 +" + streakBonus().toFixed(1) + "%</span>";
     } else st.hidden = true;
+    /* 恩怨录（累世宿敌羁绊） */
+    var sg = save.saga || { dao: 0, grudge: 0, allies: 0, feuds: 0, slain: 0 };
+    var saga = $("home-saga");
+    if ((sg.allies || 0) + (sg.feuds || 0) > 0) {
+      saga.hidden = false;
+      saga.innerHTML = "🔗 恩怨录：<span class=\"saga-dao\">道谊 " + (sg.dao || 0) + "</span>" +
+        "<span class=\"saga-sep\"> · </span><span class=\"saga-grudge\">宿怨 " + (sg.grudge || 0) + "</span>" +
+        "<br>结交道友 <b>" + (sg.allies || 0) + "</b> 次 · 立下死敌 <b>" + (sg.feuds || 0) + "</b> 次 · 亲手斩落宿敌 <b>" + (sg.slain || 0) + "</b> 次" +
+        "<br><span style=\"color:var(--sub);font-weight:400\">道谊增益来世寿元与资质，宿怨让你带着恨意起手更狠</span>";
+    } else saga.hidden = true;
     /* 图鉴 / 挑战码按钮提示 */
     var cx = codexProgress();
     $("codex-tip").textContent = "已收集 " + cx.got + " / " + cx.total;
@@ -213,6 +227,7 @@
     persist();
   }
   function streakBonus() { return Math.min(3, (save.streak.n || 0) * 0.3); }
+  function sagaAptBonus() { return Math.min(3, ((save.saga && save.saga.dao) || 0) * 0.12); }
 
   /* ---------------- 图鉴收集 ---------------- */
   function recordRoot(name) { if (!name) return false; var isNew = !save.codex.roots[name]; save.codex.roots[name] = (save.codex.roots[name] || 0) + 1; persist(); return isNew; }
@@ -325,7 +340,7 @@
     else if (dailyMode) seed = "XXSIM-DAILY-" + dateStr();
     else seed = randSeedStr();
     Sim.setRng(Sim.mulberry32(Sim.hashStr(seed)));
-    run = Sim.newRun(save.playerLv, achBonus() + streakBonus(), { legacy: save.legacy || {} });
+    run = Sim.newRun(save.playerLv, achBonus() + streakBonus() + sagaAptBonus(), { legacy: save.legacy || {}, saga: save.saga });
     run.seed = seed; run.chalTarget = chalTarget;
     run.rivalShown = 0; run.passedBots = {};
     /* 图鉴：记录本次觉醒的灵根 */
@@ -427,6 +442,9 @@
       if (pending && pending.kind === "choice") { openChoice(pending.choice); return; }
       if (pending && pending.kind === "catch") { openCatch(pending.item); return; }
       if (run.tribYear) { openTrib(); return; }
+      if (!run.bondChosen && Sim.realmOf(run.lvl) >= 2 && run.age - (run.lastInteractAge || 0) >= Sim.interactCd(run.lvl)) {
+        run.lastInteractAge = run.age; openBond(); return;
+      }
       if (Sim.realmOf(run.lvl) >= 2 && run.age - (run.lastInteractAge || 0) >= Sim.interactCd(run.lvl) && Sim.rnd() < 0.004) {
         run.lastInteractAge = run.age; openDemon(); return;
       }
@@ -679,6 +697,52 @@
     demonRaf = requestAnimationFrame(tick);
   }
 
+  /* ---------------- 宿敌羁绊：结为道友 / 立为死敌 ---------------- */
+  function openBond() {
+    interacting = true;
+    var mask = $("bond-mask"); mask.hidden = false;
+    var res = $("bond-result"); res.hidden = true;
+    var btns = { friend: $("bond-friend"), enemy: $("bond-enemy"), neutral: $("bond-neutral") };
+    Object.keys(btns).forEach(function (k) { btns[k].classList.remove("dimmed"); btns[k].onclick = null; });
+    var name = run.rival.name;
+    var ahead = (run.foeLvl || 1) > run.lvl;
+    $("bond-text").innerHTML = "狭路相逢！同代宿敌「<b>" + name + "</b>」拦在你面前，目光灼灼——是化敌为友，还是不死不休？";
+    $("bond-stand").innerHTML = "当前修为：你 <b>" + run.lvl + "</b> 级　·　宿敌 <b>" + (run.foeLvl || 1) + "</b> 级" +
+      (ahead ? "　（他暂时领先，你岂能甘心！）" : "　（你暂时领先，他虎视眈眈）");
+    var chosen = false;
+    function choose(kind) {
+      if (chosen) return; chosen = true;
+      run.bondChosen = true;
+      run.bond = (kind === "neutral") ? null : kind;
+      Object.keys(btns).forEach(function (k) { if (k !== kind) btns[k].classList.add("dimmed"); });
+      var entry, color, head;
+      if (kind === "friend") {
+        var ap = Sim.applyEff(run, { xp: [8, 20] });
+        color = "var(--green)";
+        head = "🤝 你与「" + name + "」义结金兰，自此论道同行、渡劫护道" + (ap || "");
+        entry = { age: run.age, type: "good", text: "与宿敌「" + name + "」结为道友，义结金兰" + (ap || "") };
+      } else if (kind === "enemy") {
+        var ac = Sim.applyEff(run, { combat: [0.03, 0.08] });
+        color = "var(--red)";
+        head = "⚔️ 你与「" + name + "」立下死誓，不死不休！被他压制反而激发你的凶性" + (ac || "");
+        entry = { age: run.age, type: "rival", text: "与宿敌「" + name + "」立为死敌，不死不休" + (ac || "") };
+      } else {
+        color = "var(--sub)";
+        head = "😐 你与「" + name + "」相视一笑，各修各道，两不相欠";
+        entry = { age: run.age, type: "plain", text: "与宿敌「" + name + "」一笑泯恩仇，各修各道" };
+      }
+      res.hidden = false; res.style.color = color; res.textContent = head;
+      run.log.push(entry); appendLog(entry); renderAttrs(); sGold();
+      setTimeout(function () {
+        mask.hidden = true; interacting = false;
+        loop();
+      }, 1400);
+    }
+    btns.friend.onclick = function () { choose("friend"); };
+    btns.enemy.onclick = function () { choose("enemy"); };
+    btns.neutral.onclick = function () { choose("neutral"); };
+  }
+
   /* ---------------- 弹幕 ---------------- */
   function startDanmaku() {
     stopDanmaku();
@@ -709,6 +773,27 @@
 
     var baseCombat = Sim.combatOf(run);
     var finalCombat = run.ascended ? (run.finalCombat || Math.round(baseCombat * (run.xianyuan ? run.xianyuan.rate : 1))) : baseCombat;
+
+    /* 宿敌胜负 + 羁绊结算（死敌斩落 → 战力暴涨，需在入榜前生效） */
+    var beatRival = (run.ascended && !run.rival.ascended) || run.lvl > run.rival.finalLvl;
+    if (!save.saga) save.saga = { dao: 0, grudge: 0, allies: 0, feuds: 0, slain: 0, lastBond: null, lastName: "" };
+    var bondLine = "", slewRival = false;
+    if (run.bond === "enemy") {
+      save.saga.feuds++;
+      if (beatRival) {
+        finalCombat = Math.round(finalCombat * 1.18);
+        save.saga.slain++; save.saga.grudge += 2; slewRival = true;
+        bondLine = "⚔ 你亲手斩落宿敌「" + run.rival.name + "」，一世宿怨就此了结，战力暴涨 ×1.18！（宿怨 +2）";
+      } else {
+        save.saga.grudge += 1;
+        bondLine = "⚔ 死敌「" + run.rival.name + "」这一世终究压过你，宿怨未消（+1），来世带着恨意再战！";
+      }
+    } else if (run.bond === "friend") {
+      save.saga.allies++; save.saga.dao += 2;
+      bondLine = "🤝 与道友「" + run.rival.name + "」相守一世，道谊深厚（+2），来世福泽绵长、寿元更增。";
+    }
+    save.saga.lastBond = run.bond; save.saga.lastName = run.rival.name;
+
     var exp = Sim.runExp(run);
     save.runs++;
     if (run.ascended) save.ascends++;
@@ -732,16 +817,13 @@
     save.board.sort(function (a, b) { return b.combat - a.combat; });
     save.board = save.board.slice(0, 60);
 
-    /* 宿敌胜负 */
-    var beatRival = (run.ascended && !run.rival.ascended) || run.lvl > run.rival.finalLvl;
-
     /* 成就判定 */
     var ctx = {
       lvl: run.lvl, age: run.age, apt: run.apt, combat: finalCombat,
       ascend: run.ascended, ascends: save.ascends, runs: save.runs,
       xianyuan: save.everXianyuan, comboBest: run.comboBest,
       beatRival: beatRival, dailyDone: !!(save.daily && save.daily.done),
-      caught: run.caught
+      caught: run.caught, bondFriend: run.bond === "friend", slewRival: slewRival
     };
     var newly = [];
     D.ACHIEVEMENTS.forEach(function (a) {
@@ -777,6 +859,14 @@
       sr.className = "settle-rival";
       sr.innerHTML = "😤 宿敌「" + run.rival.name + "」这一世胜过你（他终 " + run.rival.finalLvl + " 级" + (run.rival.ascended ? "·已飞升" : "") + "），来世再战！";
     }
+
+    /* 羁绊结果 */
+    var sb = $("settle-bond");
+    if (bondLine) {
+      sb.hidden = false;
+      sb.className = "settle-bond" + (run.bond === "friend" ? " friend" : run.bond === "enemy" ? " enemy" : "");
+      sb.innerHTML = bondLine;
+    } else { sb.hidden = true; }
 
     /* 挑战码结果（异步 PK） */
     var sc = $("settle-chal");
@@ -816,6 +906,15 @@
 
     renderLegacyPick();
     show("view-settle");
+    run._finalCombat = finalCombat;
+    var sn = $("settle-nick"); if (sn) sn.value = save.nickname || "";
+    var sns = $("settle-net-status");
+    if (sns) {
+      sns.className = "settle-net-status";
+      sns.textContent = (window.Net && Net.enabled())
+        ? "上传后可在全网天下榜留名（昵称可随时改）"
+        : "联网榜未配置，暂无法上传（在 net.js 填入 Supabase 凭据开启）";
+    }
     if (newXY) {
       var cxy = codexProgress();
       celebrate({
@@ -905,7 +1004,16 @@
 
   /* ---------------- 排行榜 ---------------- */
   var rankTab = "combat";
+  var rankMode = "local";
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function bindRankMode() {
+    var bl = $("rank-mode-local"), bn = $("rank-mode-net");
+    if (bl) { bl.classList.toggle("active", rankMode === "local"); bl.onclick = function () { rankMode = "local"; renderRank(); }; }
+    if (bn) { bn.classList.toggle("active", rankMode === "net"); bn.onclick = function () { rankMode = "net"; renderRank(); }; }
+  }
   function renderRank() {
+    bindRankMode();
+    if (rankMode === "net") { renderNetRank(); return; }
     var list = save.board.slice().sort(function (a, b) {
       return rankTab === "combat" ? b.combat - a.combat : rankTab === "lvl" ? b.lvl - a.lvl : b.age - a.age;
     }).slice(0, 30);
@@ -930,6 +1038,36 @@
       btn.onclick = function () { rankTab = btn.getAttribute("data-tab"); renderRank(); };
     });
   }
+  function renderNetRank() {
+    $("rank-board").innerHTML = "";
+    var body = $("rank-body"), note = $("rank-note");
+    if (!window.Net || !Net.enabled()) {
+      note.textContent = "天下榜未开启";
+      body.innerHTML = '<div class="lb-tip">联网天下榜尚未配置。<br>在 net.js 里填入你的 Supabase 项目 url 与 anonKey 后，' +
+        '全网修士的战力就会汇聚到这里。</div>';
+      return;
+    }
+    note.textContent = "天下榜 · 全网修士实时战力（Supabase）";
+    body.innerHTML = '<div class="lb-tip">正在从天下榜拉取战绩…</div>';
+    Net.top(50).then(function (rows) {
+      if (!rows || !rows.length) { body.innerHTML = '<div class="lb-tip">天下榜还没有人上榜，来做第一个！</div>'; return; }
+      body.innerHTML = rows.map(function (b, i) {
+        var medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : (i + 1);
+        var label = esc(b.nickname || "无名散修") + " <span style=\"color:#8fa2c4\">·" + esc(b.root || "") + "</span>" +
+          (b.ascend ? ' <b class="lb-god">仙</b>' : "") +
+          (b.bond === "enemy" ? ' <span class="lb-god" style="color:#ff9b8a;border-color:#5a2b2b">敌</span>' :
+           b.bond === "friend" ? ' <span class="lb-god" style="color:#8fe6b0;border-color:#2b5a3f">友</span>' : "");
+        return '<div class="lb-row">' +
+          '<span class="lb-pos">' + medal + "</span>" +
+          '<span class="lb-name">' + label + "</span>" +
+          '<span class="lb-realm">' + esc(b.realm || "") + "·" + (b.lvl || 0) + "级</span>" +
+          '<b class="lb-val">' + Sim.fmtNum(b.combat || 0) + "</b>" +
+          "</div>";
+      }).join("");
+    }).catch(function (e) {
+      body.innerHTML = '<div class="lb-tip">天下榜拉取失败：' + esc(e && e.message ? e.message : "网络错误") + "<br>请检查 net.js 配置或稍后再试。</div>";
+    });
+  }
 
   /* ---------------- 成就页 ---------------- */
   function renderAch() {
@@ -946,6 +1084,16 @@
   /* ---------------- 设置 ---------------- */
   var settingsReturn = "home";
   function bindSettings() {
+    var ni = $("nick-input");
+    if (ni) {
+      ni.value = save.nickname || "";
+      ni.oninput = function () { save.nickname = ni.value.replace(/[<>]/g, "").slice(0, 12); persist(); };
+    }
+    var ns = $("net-status");
+    if (ns) {
+      if (window.Net && Net.enabled()) { ns.textContent = "联网榜已连接：可上传战绩、查看天下榜"; ns.classList.add("on"); }
+      else { ns.textContent = "联网榜未配置：在 net.js 填入 Supabase url 与 anonKey 后开启"; ns.classList.remove("on"); }
+    }
     var sw = $("home-sound"); sw.checked = save.sound;
     sw.onchange = function () { save.sound = sw.checked; persist(); if (save.sound) sUp(); };
     var dm = $("home-danmaku"); dm.checked = save.danmaku;
@@ -1015,6 +1163,34 @@
     $("btn-settle-review").onclick = openReview;
     $("btn-settle-share").onclick = shareRun;
     $("btn-settle-challenge").onclick = genChallenge;
+    var snk = $("settle-nick");
+    if (snk) snk.oninput = function () { save.nickname = snk.value.replace(/[<>]/g, "").slice(0, 12); persist(); };
+    var upBtn = $("btn-settle-upload");
+    if (upBtn) upBtn.onclick = function () {
+      var st = $("settle-net-status");
+      if (!window.Net || !Net.enabled()) {
+        if (st) { st.className = "settle-net-status err"; st.textContent = "联网榜未配置：请先在 net.js 填入 Supabase url 与 anonKey。"; }
+        return;
+      }
+      if (!run) return;
+      var nickEl = $("settle-nick");
+      var nick = Net.cleanNick(nickEl ? nickEl.value : save.nickname);
+      save.nickname = nick; persist();
+      upBtn.disabled = true;
+      if (st) { st.className = "settle-net-status"; st.textContent = "上传中…"; }
+      var entry = {
+        nickname: nick, root: run.root, apt: run.apt, lvl: run.lvl,
+        realm: D.REALMS[Sim.realmOf(run.lvl)], combat: run._finalCombat || Sim.combatOf(run),
+        age: run.age, ascend: !!run.ascended, bond: run.bond, seed: run.seed || ""
+      };
+      Net.submit(entry).then(function () {
+        if (st) { st.className = "settle-net-status ok"; st.textContent = "已上榜！去 🏆仙榜 → 🌐天下榜 看看你的排名"; }
+        sGold(); upBtn.disabled = false;
+      }).catch(function (e) {
+        if (st) { st.className = "settle-net-status err"; st.textContent = "上传失败：" + (e && e.message ? e.message : "网络错误"); }
+        upBtn.disabled = false;
+      });
+    };
     $("btn-review-close").onclick = function () { $("review-mask").hidden = true; };
   }
 
@@ -1030,6 +1206,7 @@
       setLvl: function (v) { if (run) { run.lvl = v; renderAttrs(); } },
       trib: function () { if (run) { interacting = false; paused = false; clearTimeout(timer); openTrib(); } },
       demon: function () { if (run) { interacting = false; paused = false; clearTimeout(timer); openDemon(); } },
+      bond: function () { if (run) { interacting = false; paused = false; clearTimeout(timer); openBond(); } },
       catchIt: function () { if (run) { interacting = false; paused = false; clearTimeout(timer); openCatch(D.CATCH_ITEMS[0]); } }
     };
   }

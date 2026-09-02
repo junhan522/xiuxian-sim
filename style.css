@@ -497,3 +497,74 @@ body {
 }
 .celebrate-sub { position: relative; margin-top: 8px; font-size: 13px; color: var(--sub); line-height: 1.6; }
 .celebrate-prog { position: relative; margin-top: 12px; font-size: 12px; color: var(--green); font-weight: 700; }
+
+/* ================= 宿敌羁绊 / 恩怨录 ================= */
+.home-saga {
+  border: 1px solid rgba(185, 138, 255, 0.4); border-radius: 12px;
+  padding: 9px 12px; margin: 0 0 12px; font-size: 13px; color: #ded0ff;
+  background: linear-gradient(90deg, rgba(185,138,255,0.10), rgba(245,201,107,0.06));
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; line-height: 1.7;
+}
+.home-saga b { color: var(--gold2); }
+.home-saga .saga-dao { color: var(--green); font-weight: 700; }
+.home-saga .saga-grudge { color: var(--red); font-weight: 700; }
+.home-saga .saga-sep { color: var(--line); }
+
+.settle-bond { margin: 8px 0; font-size: 14px; font-weight: 700; color: var(--gold2); }
+.settle-bond.friend { color: var(--green); }
+.settle-bond.enemy { color: var(--red); }
+
+/* 羁绊弹窗 */
+.bond-box { max-width: 420px; }
+.bond-stand {
+  text-align: center; font-size: 13px; color: var(--sub); margin: 4px 0 14px;
+  padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line);
+}
+.bond-stand b { color: var(--gold2); }
+.bond-opts { display: flex; flex-direction: column; gap: 10px; }
+.bond-opt {
+  display: grid; grid-template-columns: 34px 1fr; grid-template-rows: auto auto;
+  gap: 2px 12px; text-align: left; cursor: pointer; width: 100%;
+  padding: 12px 14px; border-radius: 14px; color: var(--text);
+  background: var(--card); border: 1.5px solid var(--line);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+.bond-opt .bo-ico { grid-row: 1 / span 2; align-self: center; font-size: 26px; text-align: center; }
+.bond-opt .bo-name { font-size: 16px; font-weight: 800; letter-spacing: 1px; }
+.bond-opt .bo-desc { font-size: 12px; color: var(--sub); line-height: 1.6; }
+.bond-opt.friend { border-color: rgba(89,214,140,0.5); }
+.bond-opt.friend .bo-name { color: var(--green); }
+.bond-opt.friend:hover { box-shadow: 0 0 20px rgba(89,214,140,0.28); transform: translateY(-2px); }
+.bond-opt.enemy { border-color: rgba(255,107,107,0.5); }
+.bond-opt.enemy .bo-name { color: var(--red); }
+.bond-opt.enemy:hover { box-shadow: 0 0 20px rgba(255,107,107,0.28); transform: translateY(-2px); }
+.bond-opt.neutral:hover { box-shadow: 0 0 16px rgba(245,201,107,0.16); transform: translateY(-2px); }
+.bond-opt.neutral .bo-name { color: var(--sub); }
+.bond-opt.dimmed { opacity: 0.35; pointer-events: none; }
+.bond-result { margin-top: 12px; text-align: center; font-size: 14px; font-weight: 700; line-height: 1.7; animation: fadein 0.3s ease; }
+
+/* ================= 联网天下榜 UI ================= */
+.nick-row { display: flex; align-items: center; gap: 10px; }
+.nick-row .set-label { flex: 0 0 auto; }
+.nick-input {
+  flex: 1 1 auto; min-width: 0; background: var(--bg2); border: 1px solid var(--line);
+  border-radius: 10px; color: var(--text); padding: 9px 12px; font-size: 15px; outline: none;
+}
+.nick-input:focus { border-color: var(--gold); }
+.net-status { margin-top: 8px; font-size: 12px; color: var(--sub); }
+.net-status.on { color: var(--green); }
+
+.settle-net { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; flex-wrap: wrap; }
+.settle-net .nick-input { flex: 1 1 130px; }
+.settle-net .btn { flex: 0 0 auto; white-space: nowrap; }
+.settle-net-status { flex: 1 0 100%; font-size: 12px; color: var(--sub); min-height: 16px; }
+.settle-net-status.ok { color: var(--green); }
+.settle-net-status.err { color: var(--red); }
+
+.rank-mode { display: flex; gap: 8px; margin-bottom: 12px; }
+.rm-btn {
+  flex: 1 1 0; padding: 9px 10px; border-radius: 999px; cursor: pointer; font-size: 14px;
+  background: var(--card); border: 1px solid var(--line); color: var(--sub); transition: all 0.15s ease;
+}
+.rm-btn.active { background: linear-gradient(180deg, #2b3652, #1c2536); border-color: var(--gold); color: var(--gold2); font-weight: 700; }

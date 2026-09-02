@@ -190,7 +190,9 @@
     { id: "a_shici", name: "十世轮回", desc: "累计游玩 10 局", bonus: 0.6, cond: "runs>=10" },
     { id: "a_rival", name: "既生瑜", desc: "一世修为超越同代宿敌", bonus: 0.4, cond: "beatRival" },
     { id: "a_combo", name: "势如破竹", desc: "单局达成 15 连破", bonus: 0.4, cond: "comboBest>=15" },
-    { id: "a_daily", name: "天命之人", desc: "完成一次每日同参挑战", bonus: 0.3, cond: "dailyDone" }
+    { id: "a_daily", name: "天命之人", desc: "完成一次每日同参挑战", bonus: 0.3, cond: "dailyDone" },
+    { id: "a_dao", name: "高山流水", desc: "与同代宿敌结为道友", bonus: 0.4, cond: "bondFriend" },
+    { id: "a_slain", name: "何生亮", desc: "作为死敌亲手斩落同代宿敌", bonus: 0.6, cond: "slewRival" }
   ];
 
   /* ---------- 抉择事件：暂停流年，弹出两难选择（risk / reward） ----------

@@ -29,6 +29,7 @@
       </div>
       <div class="home-count">已有 <b id="home-count">--</b> 位修士觉醒灵根 · 已有 <b id="home-ascend-count">--</b> 位修士飞升成仙</div>
       <div class="home-streak" id="home-streak" hidden></div>
+      <div class="home-saga" id="home-saga" hidden></div>
       <div class="home-lv">
         <div class="lv-head">
           <span class="lv-name">玩家等级</span>
@@ -133,6 +134,7 @@
         <div class="settle-god" id="settle-god" hidden></div>
         <div class="settle-xinwu" id="settle-xinwu" hidden></div>
         <div class="settle-rival" id="settle-rival" hidden></div>
+        <div class="settle-bond" id="settle-bond" hidden></div>
         <div class="settle-chal" id="settle-chal" hidden></div>
         <div class="settle-regret" id="settle-regret" hidden></div>
         <div class="settle-miss" id="settle-miss" hidden></div>
@@ -140,6 +142,11 @@
         <div class="settle-legacy" id="settle-legacy" hidden>
           <div class="legacy-head">🕯 转世遗泽 · 三选一，带入下一世</div>
           <div class="legacy-cards" id="legacy-cards"></div>
+        </div>
+        <div class="settle-net" id="settle-net">
+          <input type="text" class="nick-input" id="settle-nick" maxlength="12" placeholder="无名散修">
+          <button class="btn" id="btn-settle-upload">🌐 上传天下榜</button>
+          <span class="settle-net-status" id="settle-net-status"></span>
         </div>
         <div class="settle-btns">
           <button class="btn btn-primary btn-big" id="btn-settle-again">再入轮回</button>
@@ -157,6 +164,10 @@
         <h2 class="page-title">🏆 仙榜</h2>
         <button class="btn-close" id="btn-close-rank">✕</button>
       </header>
+      <div class="rank-mode" id="rank-mode">
+        <button class="rm-btn active" id="rank-mode-local">📱 本地仙榜</button>
+        <button class="rm-btn" id="rank-mode-net">🌐 天下榜</button>
+      </div>
       <div class="tabs" id="rank-board"></div>
       <div class="lb-note" id="rank-note">加载中…</div>
       <div class="lb-body" id="rank-body"><div class="lb-tip">加载中…</div></div>
@@ -190,6 +201,13 @@
         <button class="btn-close" id="btn-close-settings">✕</button>
       </header>
       <div class="settings-body">
+        <div class="set-card">
+          <div class="nick-row">
+            <span class="set-label">🌐 天下榜昵称</span>
+            <input type="text" class="nick-input" id="nick-input" maxlength="12" placeholder="无名散修">
+          </div>
+          <div class="net-status" id="net-status">联网榜未配置</div>
+        </div>
         <div class="set-card">
           <label class="set-row">
             <span class="set-label">🔊 音效</span>
@@ -225,8 +243,10 @@
         <div class="about-text">
           6 岁觉醒，<b>长按觉醒仪式</b>抽取灵根与资质、寿元，随后逐年修炼。不同境界会遇到<b>专属机缘</b>——凡尘拾遗、秘境夺宝、渡劫淬体，各有凶险与造化。<br><br>
           修炼途中会弹出<b>两难抉择</b>、天降<b>机缘</b>（手快接住）、心魔来袭（狂点驱散）；你还会遇到一位<b>同代宿敌</b>，与你在同一条时间线上竞速，看他先飞升还是你先陨落。<br><br>
+          与宿敌狭路相逢时，可<b>结为道友</b>（论道相助、渡劫护道）或<b>立为死敌</b>（被压制则愤而精进、斩落他战力暴涨）；这份恩怨会化作「道谊 / 宿怨」<b>跨越轮回</b>，福泽或磨砺你的每一世。<br><br>
           修至巅峰（99 级·半步真仙）后，即可发动<b>渡劫拔河</b>：疯狂点击顶住天劫流失，把进度条拉满即白日飞升！若曾得 <b>仙缘</b>，流失更慢、更易成功。<br><br>
-          每局结束获得经验提升玩家等级，并可<b>三选一继承「转世遗泽」</b>带入下一世。<b>每日同参</b>则是全体玩家同一命格的挑战，来比比谁更强！
+          每局结束获得经验提升玩家等级，并可<b>三选一继承「转世遗泽」</b>带入下一世。<b>每日同参</b>则是全体玩家同一命格的挑战，来比比谁更强！<br><br>
+          结算时可录入昵称<b>上传「天下榜」</b>，在 🏆仙榜 → 🌐天下榜 与全网修士一较高下！
         </div>
       </div>
     </section>
@@ -254,6 +274,33 @@
       <div class="mask-info" id="choice-text">--</div>
       <div class="choice-opts" id="choice-opts"></div>
       <div class="choice-result" id="choice-result" hidden></div>
+    </div>
+  </div>
+
+  <!-- ============ 宿敌羁绊：道友 / 死敌 ============ -->
+  <div id="bond-mask" class="mask" hidden>
+    <div class="mask-box bond-box">
+      <div class="mask-title">🔗 宿敌当前</div>
+      <div class="mask-info" id="bond-text">--</div>
+      <div class="bond-stand" id="bond-stand">--</div>
+      <div class="bond-opts" id="bond-opts">
+        <button class="bond-opt friend" id="bond-friend">
+          <span class="bo-ico">🤝</span>
+          <span class="bo-name">结为道友</span>
+          <span class="bo-desc">化干戈为玉帛。论道相助、渡劫护道，转世积累「道谊」，福泽绵长。</span>
+        </button>
+        <button class="bond-opt enemy" id="bond-enemy">
+          <span class="bo-ico">⚔️</span>
+          <span class="bo-name">立为死敌</span>
+          <span class="bo-desc">既生瑜何生亮。被他压制则愤而精进，斩落宿敌战力暴涨，转世积累「宿怨」。</span>
+        </button>
+        <button class="bond-opt neutral" id="bond-neutral">
+          <span class="bo-ico">😐</span>
+          <span class="bo-name">两不相欠</span>
+          <span class="bo-desc">一笑了之，各修各道。无增益也无宿怨，稳妥。</span>
+        </button>
+      </div>
+      <div class="bond-result" id="bond-result" hidden></div>
     </div>
   </div>
 
@@ -328,6 +375,7 @@
 
   <script src="data.js"></script>
   <script src="sim.js"></script>
+  <script src="net.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
