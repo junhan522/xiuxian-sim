@@ -76,44 +76,102 @@
   var TRIB_BACKLASH = 0.25;
 
   /* 随机事件：w=权重，min/max=生效等级段，eff 由 sim 解释
-   * eff.xp = 感悟（百分点）；eff.life = 寿元（年）；eff.combat = 战力（基础战力百分比） */
+   * eff.xp = 感悟（百分点）；eff.life = 寿元（年）；eff.combat = 战力（基础战力百分比）
+   * 事件按境界分段，避免高境界修士遇到「误食百年灵果」之类低阶机缘。
+   * sim.pickEvent 会同时按等级段与当前境界 realm 过滤。 */
   var EVENTS = [
-    /* ---- 修炼增益类 ---- */
-    { w: 10, min: 1, max: 98, text: "在后山石洞中捡到一页残破功法，似有所悟", eff: { xp: [4, 12] } },
-    { w: 8, min: 11, max: 98, text: "观摩长辈讲道，茅塞顿开，修为精进", eff: { xp: [6, 18] } },
-    { w: 6, min: 21, max: 98, text: "枯坐崖畔三载，一朝顿悟，灵气灌体", eff: { xp: [10, 26] } },
-    { w: 5, min: 41, max: 98, text: "于上古遗迹参悟碑文，道心通明", eff: { xp: [16, 36] } },
-    { w: 4, min: 61, max: 98, text: "与隐世高人论道七日，胜读百年道藏", eff: { xp: [22, 48] } },
-    /* ---- 寿元类 ---- */
-    { w: 8, min: 1, max: 98, text: "误食一株百年灵果，神清气爽，寿元渐长", eff: { life: [2, 8] } },
-    { w: 6, min: 21, max: 98, text: "寻得一眼灵泉，日日吐纳，肉身不衰", eff: { life: [5, 15] } },
-    { w: 5, min: 41, max: 98, text: "炼制延寿丹药成功，气血回春", eff: { life: [10, 30] } },
-    { w: 4, min: 1, max: 40, text: "修炼急进，气血亏空，寿元有损", eff: { life: [-12, -4] } },
-    { w: 3, min: 31, max: 98, text: "冲击瓶颈失败遭反噬，根基受损", eff: { life: [-25, -8], xp: [-12, -4] } },
-    /* ---- 战力 / 法宝类 ---- */
-    { w: 8, min: 1, max: 98, text: "集市淘到一柄蒙尘旧剑，竟是件法器", eff: { combat: [0.04, 0.1] } },
-    { w: 6, min: 11, max: 98, text: "炼器有成，本命法宝初成", eff: { combat: [0.06, 0.15] } },
-    { w: 5, min: 31, max: 98, text: "斩妖除魔历练归来，斗法经验大涨", eff: { combat: [0.1, 0.2] } },
-    { w: 4, min: 51, max: 98, text: "得上古大能传承，神通初成", eff: { combat: [0.15, 0.3], xp: [8, 20] } },
-    { w: 4, min: 71, max: 98, text: "淬炼仙骨，肉身成圣，战力暴涨", eff: { combat: [0.2, 0.4] } },
-    /* ---- 凶险类 ---- */
-    { w: 5, min: 1, max: 60, text: "进山采药被毒蛇咬伤，卧床半月", eff: { life: [-6, -2] } },
-    { w: 4, min: 11, max: 80, text: "遭遇妖修偷袭，拼死逃脱，元气大伤", eff: { life: [-15, -6], combat: [-0.08, -0.03] } },
-    { w: 3, min: 21, max: 98, text: "心魔滋生，闭关走火，幸而及时清醒", eff: { life: [-18, -6] } },
-    { w: 2, min: 1, max: 20, text: "卷入凡人帮派仇杀，险些丧命", eff: { life: [-8, -3] } },
-    { w: 3, min: 61, max: 98, text: "渡虚之时遭遇空间乱流，侥幸脱身", eff: { life: [-40, -12] } },
-    /* ---- 奇遇类 ---- */
-    { w: 3, min: 1, max: 98, text: "救下一只受伤灵鹤，结下善缘", eff: { xp: [4, 10], life: [2, 6] } },
-    { w: 3, min: 1, max: 98, text: "梦中得一白发老者点拨，醒来修为隐有松动", eff: { xp: [6, 16] } },
-    { w: 2, min: 31, max: 98, text: "误入洞天福地，灵气如潮，功法自行运转", eff: { xp: [14, 30], life: [5, 15] } },
-    { w: 2, min: 51, max: 98, text: "观星河运转忽有所感，悟出一门神通", eff: { xp: [12, 28], combat: [0.08, 0.16] } },
-    { w: 2, min: 1, max: 98, text: "被宗门长老看中，收记名弟子", eff: { xp: [5, 14] } },
-    /* ---- 平淡日常 ---- */
-    { w: 16, min: 1, max: 98, text: "闭关苦修，未有寸进，好在道心稳固", eff: {} },
-    { w: 12, min: 1, max: 98, text: "下山历练，见识风土人情", eff: {} },
-    { w: 8, min: 1, max: 98, text: "与同门论道切磋，互有胜负", eff: { xp: [2, 6] } },
-    { w: 8, min: 1, max: 30, text: "替宗门打理灵田，赚了些灵石", eff: {} },
-    { w: 6, min: 11, max: 98, text: "参加坊市拍卖，看了回热闹", eff: {} }
+    /* ==================== 炼气（1-10）凡尘稚修 ==================== */
+    { w: 12, min: 1, max: 10, realm: 0, text: "在后山石洞中捡到一页残破功法，似有所悟", eff: { xp: [4, 12] } },
+    { w: 10, min: 1, max: 10, realm: 0, text: "误食一株百年灵果，神清气爽，寿元渐长", eff: { life: [2, 8] } },
+    { w: 8, min: 1, max: 10, realm: 0, text: "集市淘到一柄蒙尘旧剑，竟是件法器", eff: { combat: [0.04, 0.1] } },
+    { w: 8, min: 1, max: 10, realm: 0, text: "被宗门长老看中，收为记名弟子", eff: { xp: [5, 14] } },
+    { w: 8, min: 1, max: 10, realm: 0, text: "救下一只受伤灵鹤，结下善缘", eff: { xp: [4, 10], life: [2, 6] } },
+    { w: 6, min: 1, max: 10, realm: 0, text: "进山采药被毒蛇咬伤，卧床半月", eff: { life: [-6, -2] } },
+    { w: 5, min: 1, max: 10, realm: 0, text: "卷入凡人帮派仇杀，险些丧命", eff: { life: [-8, -3] } },
+    { w: 6, min: 1, max: 10, realm: 0, text: "修炼急进，气血亏空，寿元有损", eff: { life: [-10, -4] } },
+    { w: 18, min: 1, max: 10, realm: 0, text: "替宗门打理灵田，赚了些灵石", eff: {} },
+    { w: 16, min: 1, max: 10, realm: 0, text: "打坐吐纳，未有寸进，好在道心稳固", eff: {} },
+
+    /* ==================== 筑基（11-20） ==================== */
+    { w: 12, min: 11, max: 20, realm: 1, text: "观摩长辈讲道，茅塞顿开，修为精进", eff: { xp: [6, 18] } },
+    { w: 9, min: 11, max: 20, realm: 1, text: "梦中得一白发老者点拨，醒来修为隐有松动", eff: { xp: [8, 18] } },
+    { w: 8, min: 11, max: 20, realm: 1, text: "炼器有成，本命法器初成", eff: { combat: [0.06, 0.15] } },
+    { w: 8, min: 11, max: 20, realm: 1, text: "寻得一眼灵泉，日日吐纳，肉身不衰", eff: { life: [5, 15] } },
+    { w: 6, min: 11, max: 20, realm: 1, text: "下山历练，遭遇妖修偷袭，拼死逃脱", eff: { life: [-15, -6], combat: [-0.08, -0.03] } },
+    { w: 6, min: 11, max: 20, realm: 1, text: "冲击瓶颈失败遭反噬，根基受损", eff: { life: [-18, -8], xp: [-10, -4] } },
+    { w: 16, min: 11, max: 20, realm: 1, text: "参加坊市拍卖，看了回热闹", eff: {} },
+    { w: 14, min: 11, max: 20, realm: 1, text: "与同门论道切磋，互有胜负", eff: { xp: [2, 6] } },
+
+    /* ==================== 金丹（21-30） ==================== */
+    { w: 12, min: 21, max: 30, realm: 2, text: "枯坐崖畔三载，一朝顿悟，灵气灌体", eff: { xp: [10, 26] } },
+    { w: 9, min: 21, max: 30, realm: 2, text: "炼制延寿丹药成功，气血回春", eff: { life: [8, 20] } },
+    { w: 8, min: 21, max: 30, realm: 2, text: "斩妖除魔历练归来，斗法经验大涨", eff: { combat: [0.1, 0.2] } },
+    { w: 8, min: 21, max: 30, realm: 2, text: "误入洞天福地，灵气如潮，功法自行运转", eff: { xp: [14, 30], life: [5, 15] } },
+    { w: 6, min: 21, max: 30, realm: 2, text: "心魔滋生，闭关走火，幸而及时清醒", eff: { life: [-18, -8] } },
+    { w: 6, min: 21, max: 30, realm: 2, text: "结丹引来天雷淬体，金丹略有裂痕", eff: { xp: [-14, -6] } },
+    { w: 14, min: 21, max: 30, realm: 2, text: "开宗立派收徒讲道，声望渐起", eff: {} },
+
+    /* ==================== 元婴（31-40） ==================== */
+    { w: 12, min: 31, max: 40, realm: 3, text: "元婴出游千里，归来道行更深", eff: { xp: [16, 34] } },
+    { w: 9, min: 31, max: 40, realm: 3, text: "于上古遗迹参悟碑文，道心通明", eff: { xp: [16, 36] } },
+    { w: 8, min: 31, max: 40, realm: 3, text: "淬炼元婴法相，神通初成", eff: { combat: [0.15, 0.3] } },
+    { w: 7, min: 31, max: 40, realm: 3, text: "寻得千年灵乳重塑肉身，寿元大增", eff: { life: [15, 35] } },
+    { w: 6, min: 31, max: 40, realm: 3, text: "遭同阶老怪夺舍，重创元婴", eff: { life: [-30, -12] } },
+    { w: 6, min: 31, max: 40, realm: 3, text: "渡三灾小劫，肉身几近崩坏", eff: { life: [-25, -10], combat: [-0.1, -0.04] } },
+    { w: 12, min: 31, max: 40, realm: 3, text: "闭关参悟元婴大道，岁月无痕", eff: {} },
+
+    /* ==================== 化神（41-50） ==================== */
+    { w: 12, min: 41, max: 50, realm: 4, text: "神游太虚，窥见一丝天地法则", eff: { xp: [22, 44] } },
+    { w: 9, min: 41, max: 50, realm: 4, text: "与隐世高人论道七日，胜读百年道藏", eff: { xp: [24, 48] } },
+    { w: 8, min: 41, max: 50, realm: 4, text: "炼化一缕天地异火，战力暴涨", eff: { combat: [0.2, 0.4] } },
+    { w: 7, min: 41, max: 50, realm: 4, text: "悟透生死轮转，寿元再延", eff: { life: [25, 55] } },
+    { w: 6, min: 41, max: 50, realm: 4, text: "化神雷劫加身，神魂受创", eff: { life: [-40, -18] } },
+    { w: 6, min: 41, max: 50, realm: 4, text: "卷入大能争锋，被余波震伤", eff: { combat: [-0.14, -0.06] } },
+    { w: 10, min: 41, max: 50, realm: 4, text: "坐镇一方，受万修朝拜", eff: {} },
+
+    /* ==================== 炼虚（51-60） ==================== */
+    { w: 12, min: 51, max: 60, realm: 5, text: "观星河运转忽有所感，悟出一门大神通", eff: { xp: [30, 60], combat: [0.1, 0.2] } },
+    { w: 9, min: 51, max: 60, realm: 5, text: "撕裂虚空遨游星域，道行大进", eff: { xp: [34, 66] } },
+    { w: 8, min: 51, max: 60, realm: 5, text: "炼化一颗陨星之核，肉身成圣", eff: { combat: [0.25, 0.5] } },
+    { w: 7, min: 51, max: 60, realm: 5, text: "参悟岁月之道，寿元暴涨", eff: { life: [40, 90] } },
+    { w: 6, min: 51, max: 60, realm: 5, text: "渡虚之时遭遇空间乱流，侥幸脱身", eff: { life: [-50, -22] } },
+    { w: 6, min: 51, max: 60, realm: 5, text: "虚空风暴撕裂法身，元气大伤", eff: { life: [-40, -18], combat: [-0.12, -0.05] } },
+    { w: 8, min: 51, max: 60, realm: 5, text: "闭关炼虚，一梦百年", eff: {} },
+
+    /* ==================== 合体（61-70） ==================== */
+    { w: 12, min: 61, max: 70, realm: 6, text: "法天象地，与天地合一，感悟如潮", eff: { xp: [40, 80] } },
+    { w: 9, min: 61, max: 70, realm: 6, text: "得一位陨落大能的完整传承", eff: { xp: [45, 85], combat: [0.15, 0.3] } },
+    { w: 8, min: 61, max: 70, realm: 6, text: "淬炼合体法身，一拳碎星辰", eff: { combat: [0.3, 0.6] } },
+    { w: 7, min: 61, max: 70, realm: 6, text: "得天地灵物续命，寿元再增", eff: { life: [60, 130] } },
+    { w: 6, min: 61, max: 70, realm: 6, text: "合体之劫降临，法身几近崩解", eff: { life: [-80, -35] } },
+    { w: 6, min: 61, max: 70, realm: 6, text: "与另一位合体老怪斗法两败俱伤", eff: { life: [-60, -28], combat: [-0.15, -0.07] } },
+    { w: 8, min: 61, max: 70, realm: 6, text: "隐居世外，静观天地兴衰", eff: {} },
+
+    /* ==================== 大乘（71-80） ==================== */
+    { w: 12, min: 71, max: 80, realm: 7, text: "参悟大道本源，一举一动皆合天道", eff: { xp: [55, 110] } },
+    { w: 9, min: 71, max: 80, realm: 7, text: "受上界垂青，得一道仙气灌顶", eff: { xp: [60, 120], combat: [0.2, 0.4] } },
+    { w: 8, min: 71, max: 80, realm: 7, text: "凝练大乘道果，战力登峰造极", eff: { combat: [0.4, 0.8] } },
+    { w: 7, min: 71, max: 80, realm: 7, text: "以大神通逆转气血，寿元绵长", eff: { life: [90, 200] } },
+    { w: 6, min: 71, max: 80, realm: 7, text: "大乘雷劫提前降临，道基受创", eff: { life: [-120, -55] } },
+    { w: 6, min: 71, max: 80, realm: 7, text: "强渡心魔大关，神魂受损", eff: { life: [-90, -45], xp: [-20, -8] } },
+    { w: 8, min: 71, max: 80, realm: 7, text: "端坐云端，静待飞升之机", eff: {} },
+
+    /* ==================== 渡劫（81-90） ==================== */
+    { w: 14, min: 81, max: 90, realm: 8, text: "引动天地元气洗涤道体，距仙道更近一步", eff: { xp: [70, 140] } },
+    { w: 10, min: 81, max: 90, realm: 8, text: "观摩一次他人渡劫，从中悟得劫数玄机", eff: { xp: [80, 160] } },
+    { w: 9, min: 81, max: 90, realm: 8, text: "以渡劫之威淬炼仙躯，战力通天", eff: { combat: [0.5, 1.0] } },
+    { w: 8, min: 81, max: 90, realm: 8, text: "得一枚仙家残果，寿元直追仙龄", eff: { life: [120, 260] } },
+    { w: 7, min: 81, max: 90, realm: 8, text: "小渡天劫失败，被雷罚重创", eff: { life: [-160, -80] } },
+    { w: 6, min: 81, max: 90, realm: 8, text: "仙道压制反噬，道心几近失守", eff: { life: [-120, -60], xp: [-30, -12] } },
+    { w: 8, min: 81, max: 90, realm: 8, text: "闭关凝练半步仙力，静候天门", eff: {} },
+
+    /* ==================== 真仙 / 巅峰（91-99） ==================== */
+    { w: 20, min: 91, max: 99, realm: 9, text: "立于九天之巅，仙气缭绕，只待天门开启", eff: { xp: [40, 90] } },
+    { w: 16, min: 91, max: 99, realm: 9, text: "回望漫漫修行路，道心愈发圆满", eff: { xp: [30, 70], life: [40, 100] } },
+    { w: 14, min: 91, max: 99, realm: 9, text: "感应到上界召唤，仙躯愈发凝实", eff: { combat: [0.3, 0.6] } },
+    { w: 12, min: 91, max: 99, realm: 9, text: "半步真仙之境，一念可动山河", eff: { xp: [50, 110], combat: [0.2, 0.4] } },
+    { w: 10, min: 91, max: 99, realm: 9, text: "巅峰孤寂，一念差点堕入心魔幻境", eff: { life: [-90, -40] } },
+    { w: 24, min: 91, max: 99, realm: 9, text: "静坐云台，参悟飞升最后一关", eff: {} }
   ];
 
   /* 成就：cond 在结算时判定，bonus 为高阶灵根概率加成（百分点） */
@@ -129,7 +187,131 @@
     { id: "a_xianyuan", name: "仙缘天授", desc: "获得过仙缘", bonus: 0.6, cond: "xianyuan" },
     { id: "a_zhanli", name: "战力超群", desc: "单局战力超过 20 万", bonus: 0.5, cond: "combat>=200000" },
     { id: "a_zaoyao", name: "天妒英才", desc: "资质 ≥7 却在 30 岁前身陨", bonus: 0.4, cond: "apt>=7&&age<30" },
-    { id: "a_shici", name: "十世轮回", desc: "累计游玩 10 局", bonus: 0.6, cond: "runs>=10" }
+    { id: "a_shici", name: "十世轮回", desc: "累计游玩 10 局", bonus: 0.6, cond: "runs>=10" },
+    { id: "a_rival", name: "既生瑜", desc: "一世修为超越同代宿敌", bonus: 0.4, cond: "beatRival" },
+    { id: "a_combo", name: "势如破竹", desc: "单局达成 15 连破", bonus: 0.4, cond: "comboBest>=15" },
+    { id: "a_daily", name: "天命之人", desc: "完成一次每日同参挑战", bonus: 0.3, cond: "dailyDone" }
+  ];
+
+  /* ---------- 抉择事件：暂停流年，弹出两难选择（risk / reward） ----------
+   * opts[].outcomes：p=概率（累加归一，最后一项为兜底），eff 同随机事件，text=结果旁白 */
+  var CHOICES = [
+    { id: "c_dongfu", min: 5, max: 40, title: "神秘洞府", text: "山腹中发现一座无人洞府，隐有灵光流转，也可能藏有杀机……",
+      opts: [
+        { label: "闯入探查", tag: "险", outcomes: [
+          { p: 0.42, eff: { xp: [10, 26], combat: [0.05, 0.12] }, text: "得上古传承，修为与法宝双收" },
+          { p: 0.35, eff: { life: [-14, -5] }, text: "触发禁制，身受重伤狼狈逃出" },
+          { p: 0.23, eff: {}, text: "空空如也，只惊起一地尘埃" }
+        ] },
+        { label: "谨慎离开", tag: "稳", outcomes: [
+          { p: 1, eff: { xp: [2, 6] }, text: "不愿涉险，转身离去，心境平和" }
+        ] }
+      ] },
+    { id: "c_dufa", min: 12, max: 70, title: "同道约战", text: "一位同阶修士递来战书，胜者可夺对方半数灵石与一门秘法。",
+      opts: [
+        { label: "应战", tag: "险", outcomes: [
+          { p: 0.5, eff: { combat: [0.1, 0.22], xp: [6, 16] }, text: "险胜！斗法经验与战利品收入囊中" },
+          { p: 0.5, eff: { life: [-16, -6], combat: [-0.06, -0.02] }, text: "惜败，负伤而归，颜面稍损" }
+        ] },
+        { label: "婉拒", tag: "稳", outcomes: [
+          { p: 1, eff: {}, text: "拱手谢过，各走各路" }
+        ] }
+      ] },
+    { id: "c_danyao", min: 8, max: 60, title: "禁药诱惑", text: "有人兜售一枚禁忌丹药，据说服之可强行催谷修为，代价是折损寿元。",
+      opts: [
+        { label: "服下禁药", tag: "险", outcomes: [
+          { p: 0.55, eff: { xp: [18, 40], life: [-18, -8] }, text: "药力炸开，修为暴涨，代价是寿元" },
+          { p: 0.45, eff: { life: [-30, -14], xp: [-8, -2] }, text: "药性反噬，走火入魔，元气大伤" }
+        ] },
+        { label: "断然拒绝", tag: "稳", outcomes: [
+          { p: 1, eff: { xp: [1, 4] }, text: "道基为本，不为外物所动" }
+        ] }
+      ] },
+    { id: "c_yaoshou", min: 3, max: 45, title: "受困妖兽", text: "一头重伤的高阶妖兽被困于陷阱，救它或取它内丹，皆在一念之间。",
+      opts: [
+        { label: "出手相救", tag: "善", outcomes: [
+          { p: 0.6, eff: { xp: [8, 20], life: [4, 12] }, text: "妖兽感恩，反哺一缕精血与善缘" },
+          { p: 0.4, eff: { life: [-10, -3] }, text: "妖兽兽性大发，你险象环生" }
+        ] },
+        { label: "取其内丹", tag: "利", outcomes: [
+          { p: 0.7, eff: { combat: [0.08, 0.18], xp: [4, 12] }, text: "内丹入手，战力与感悟俱增" },
+          { p: 0.3, eff: { life: [-14, -5] }, text: "取丹时遭妖兽濒死反扑，受了伤" }
+        ] }
+      ] },
+    { id: "c_miijing", min: 30, max: 90, title: "秘境将启", text: "一处上古秘境即将开启，机缘与陨命各占一半，是否入内一搏？",
+      opts: [
+        { label: "深入秘境", tag: "险", outcomes: [
+          { p: 0.45, eff: { xp: [30, 66], combat: [0.12, 0.28], life: [10, 30] }, text: "夺得核心造化，一步登天" },
+          { p: 0.35, eff: { life: [-40, -18] }, text: "遭遇杀阵，重伤遁出" },
+          { p: 0.2, eff: {}, text: "秘境凶险，一无所获" }
+        ] },
+        { label: "外围拾遗", tag: "稳", outcomes: [
+          { p: 1, eff: { xp: [10, 24], combat: [0.03, 0.08] }, text: "在外围捡漏，小有收获" }
+        ] }
+      ] },
+    { id: "c_shuangxiu", min: 20, max: 85, title: "双修之邀", text: "一位道侣候选人邀你共修，双修可速进，却也可能道心受扰。",
+      opts: [
+        { label: "结为道侣", tag: "缘", outcomes: [
+          { p: 0.6, eff: { xp: [16, 38], life: [8, 24] }, text: "阴阳相济，修为与寿元双收" },
+          { p: 0.4, eff: { xp: [-10, -3], life: [-8, -2] }, text: "情缘成劫，道心蒙尘" }
+        ] },
+        { label: "潜心独修", tag: "稳", outcomes: [
+          { p: 1, eff: { xp: [4, 10] }, text: "斩断尘缘，道心如初" }
+        ] }
+      ] }
+  ];
+
+  /* ---------- 天降机缘（点击接取，考验反应） ----------
+   * eff 为接住后的收益；错失会记入「错过机缘」用于结算后悔钩子 */
+  var CATCH_ITEMS = [
+    { id: "k_lingguo", name: "百年灵果", eff: { life: [6, 14] } },
+    { id: "k_lingshi", name: "上品灵石", eff: { xp: [6, 16] } },
+    { id: "k_canjuan", name: "功法残卷", eff: { xp: [10, 24] } },
+    { id: "k_danyao", name: "延寿丹药", eff: { life: [10, 26] } },
+    { id: "k_faobao", name: "无主法宝", eff: { combat: [0.06, 0.16] } },
+    { id: "k_xianqi", name: "一缕仙气", eff: { xp: [16, 34], combat: [0.05, 0.12] } }
+  ];
+
+  /* ---------- 同代宿敌名号池 ---------- */
+  var RIVAL_NAMES = [
+    "剑痴·独孤", "丹魔·药尘", "雷子·霄", "影杀·无名", "禅心·一灯",
+    "血手·屠苏", "琴仙·清越", "阵狂·八荒", "刀尊·断岳", "花间·醉梦",
+    "玄武·镇岳", "天机·观星", "赤霄·燎原", "幽兰·泣露", "狂沙·逐日"
+  ];
+
+  /* ---------- 转世遗泽：结算时三选一，作用于下一世 ----------
+   * key 由 sim.newRun 解释 */
+  var LEGACIES = [
+    { id: "jindan_yuwen", name: "金丹余温", desc: "转世携带前世道韵，出生即为 6 级修士", key: "startLvl" },
+    { id: "can_hun", name: "残魂护体", desc: "一缕残魂庇佑，寿元上限 +12%", key: "lifeMul" },
+    { id: "dao_hen", name: "道痕铭心", desc: "前世道痕未灭，所有正向感悟 ×1.3", key: "daoHen" },
+    { id: "xian_gu", name: "仙骨遗蜕", desc: "残留仙骨，最终战力 ×1.15", key: "xianGu" },
+    { id: "yuan_chi", name: "缘池未涸", desc: "气运绵长，高阶灵根概率再提升", key: "yuanChi" },
+    { id: "fu_yun", name: "福运缠身", desc: "天降机缘出现频率翻倍", key: "fuYun" },
+    { id: "ming_huo", name: "命火长明", desc: "本命之火不熄，寿元 +25 年", key: "mingHuo" },
+    { id: "su_zhi", name: "夙世悟性", desc: "宿慧未泯，突破概率 ×1.06", key: "suZhi" }
+  ];
+
+  /* ---------- 弹幕氛围池（营造热闹感） ---------- */
+  var DANMAKU = [
+    "前排围观大佬渡劫", "这一世稳了", "笑死，又是杂灵根", "天灵根！羡慕了",
+    "坐等飞升", "这宿敌有点东西", "连破好爽", "怎么又暴毙了", "苟住别浪",
+    "接住机缘啊！", "渡劫加油！", "我上我也行", "非酋落泪", "欧皇附体",
+    "这波血赚", "寿元不够用了", "再来亿把", "见证历史"
+  ];
+
+  /* ---------- 机器人榜（填充排行榜，营造竞争感） ---------- */
+  var BOTS = [
+    { name: "青云子", lvl: 63, combat: 182000 },
+    { name: "无名散修", lvl: 47, combat: 96000 },
+    { name: "丹塔主", lvl: 71, combat: 240000 },
+    { name: "剑十三", lvl: 88, combat: 512000 },
+    { name: "小师妹", lvl: 34, combat: 51000 },
+    { name: "老怪物", lvl: 95, combat: 730000 },
+    { name: "路人甲", lvl: 22, combat: 18000 },
+    { name: "渡劫失败者", lvl: 99, combat: 900000 },
+    { name: "咸鱼翻身", lvl: 55, combat: 140000 },
+    { name: "天选之人", lvl: 99, combat: 1500000, ascend: true }
   ];
 
   /* 玩家等级经验：每级所需经验 = 50 + (lv-1)*25 */
@@ -153,6 +335,8 @@
     APT_TITLES: APT_TITLES, XIAN_YUAN: XIAN_YUAN, XIAN_YUAN_CHANCE: XIAN_YUAN_CHANCE,
     XIAN_TAI_CHANCE: XIAN_TAI_CHANCE, TRIB_BASE: TRIB_BASE, TRIB_BACKLASH: TRIB_BACKLASH,
     EVENTS: EVENTS, ACHIEVEMENTS: ACHIEVEMENTS,
+    CHOICES: CHOICES, CATCH_ITEMS: CATCH_ITEMS, RIVAL_NAMES: RIVAL_NAMES,
+    LEGACIES: LEGACIES, DANMAKU: DANMAKU, BOTS: BOTS,
     expNeed: expNeed, runTitle: runTitle
   };
 

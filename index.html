@@ -27,11 +27,18 @@
         </div>
         <div class="lv-bar"><div class="lv-bar-fill" id="home-lv-fill"></div></div>
       </div>
+      <div class="home-legacy" id="home-legacy" hidden></div>
       <div class="home-btns">
         <button class="btn btn-primary btn-big" id="btn-start">开始修仙</button>
       </div>
+      <div class="home-daily">
+        <button class="btn btn-big btn-daily" id="btn-daily">
+          <span>🎲 每日同参</span>
+          <span class="daily-tip" id="daily-tip">今日全体修士同一命格，来比比谁更强</span>
+        </button>
+      </div>
       <div class="home-ach-row">
-        <button class="btn btn-big" id="btn-rank">🏆 仙榜（本地）</button>
+        <button class="btn btn-big" id="btn-rank">🏆 仙榜</button>
         <button class="btn btn-big" id="btn-ach">
           <span>⭐ 成就</span>
           <span class="ach-btn-tip" id="ach-tip">成就增加高阶灵根概率：0%</span>
@@ -48,7 +55,10 @@
     <section id="view-game" class="view">
       <div class="game-top">
         <div class="game-title">修仙模拟器</div>
-        <button class="btn-pause" id="btn-pause">⏸</button>
+        <div class="game-top-right">
+          <div class="combo-badge" id="combo-badge" hidden>🔥 <b id="combo-num">0</b> 连破</div>
+          <button class="btn-pause" id="btn-pause">⏸</button>
+        </div>
       </div>
       <div class="attr-grid">
         <div class="attr-card">
@@ -68,7 +78,23 @@
           <div class="attr-val" id="attr-combat">--</div>
         </div>
       </div>
-      <div class="log-box" id="log-box"></div>
+      <!-- 宿敌进度对照 -->
+      <div class="rival-bar" id="rival-bar">
+        <div class="rival-line">
+          <span class="rival-tag you">你</span>
+          <div class="rival-track"><div class="rival-fill you" id="rival-fill-you"></div></div>
+          <b class="rival-lvl" id="rival-lvl-you">1</b>
+        </div>
+        <div class="rival-line">
+          <span class="rival-tag foe" id="rival-name">宿敌</span>
+          <div class="rival-track"><div class="rival-fill foe" id="rival-fill-foe"></div></div>
+          <b class="rival-lvl" id="rival-lvl-foe">?</b>
+        </div>
+      </div>
+      <div class="log-wrap">
+        <div class="log-box" id="log-box"></div>
+        <div class="danmaku-layer" id="danmaku-layer"></div>
+      </div>
     </section>
 
     <!-- ============ 结算 ============ -->
@@ -80,14 +106,23 @@
           <div class="s-row"><span>修为境界</span><b id="settle-lvl">--</b></div>
           <div class="s-row"><span>战力</span><b id="settle-combat">--</b></div>
           <div class="s-row"><span>享年</span><b id="settle-age">--</b></div>
+          <div class="s-row"><span>最高连破</span><b id="settle-combo">--</b></div>
           <div class="s-row"><span>获得经验</span><b id="settle-exp">--</b></div>
         </div>
         <div class="settle-god" id="settle-god" hidden></div>
         <div class="settle-xinwu" id="settle-xinwu" hidden></div>
+        <div class="settle-rival" id="settle-rival" hidden></div>
+        <div class="settle-regret" id="settle-regret" hidden></div>
+        <div class="settle-miss" id="settle-miss" hidden></div>
         <div class="settle-rank" id="settle-rank">--</div>
+        <div class="settle-legacy" id="settle-legacy" hidden>
+          <div class="legacy-head">🕯 转世遗泽 · 三选一，带入下一世</div>
+          <div class="legacy-cards" id="legacy-cards"></div>
+        </div>
         <div class="settle-btns">
           <button class="btn btn-primary btn-big" id="btn-settle-again">再入轮回</button>
           <button class="btn btn-big" id="btn-settle-review">📜 回顾一生</button>
+          <button class="btn btn-big" id="btn-settle-share">📣 炫耀战绩</button>
           <button class="btn btn-big" id="btn-settle-home">返回首页</button>
         </div>
       </div>
@@ -131,6 +166,15 @@
           </label>
         </div>
         <div class="set-card">
+          <label class="set-row">
+            <span class="set-label">💬 弹幕氛围</span>
+            <span class="set-switch">
+              <input type="checkbox" id="home-danmaku" checked>
+              <span class="track"></span>
+            </span>
+          </label>
+        </div>
+        <div class="set-card">
           <div class="speed-label"><span>⏱ 每年速度</span><b id="speed-val">0.1s</b></div>
           <input type="range" class="speed-range" id="speed-range" min="0.05" max="1" step="0.05" value="0.1">
         </div>
@@ -145,13 +189,74 @@
       </header>
       <div class="about-body">
         <div class="about-text">
-          6 岁觉醒，<b>随机抽取</b>灵根与资质、寿元，随后逐年修炼。资质越高，突破越快、战力越强、活得越久；修炼途中还会遇到各种随机事件——奇遇、顿悟、心魔、反噬……<br><br>
-          你唯一的目标，就是 <b>飞升成仙</b>：修炼至巅峰（99 级·半步真仙）后即可每年尝试渡劫，资质越高成功率越大；若曾获得 <b>仙缘</b> 且战力达标，更可走「引仙台」捷径，大幅提升飞升概率！<br><br>
-          每局结束都会获得经验，提升玩家等级；玩家等级越高，觉醒强大灵根的概率越大。完成成就同样能提升高阶灵根概率。快来试试——你，会不会是那个 <b>白日飞升</b> 的天选之人？
+          6 岁觉醒，<b>长按觉醒仪式</b>抽取灵根与资质、寿元，随后逐年修炼。不同境界会遇到<b>专属机缘</b>——凡尘拾遗、秘境夺宝、渡劫淬体，各有凶险与造化。<br><br>
+          修炼途中会弹出<b>两难抉择</b>、天降<b>机缘</b>（手快接住）、心魔来袭（狂点驱散）；你还会遇到一位<b>同代宿敌</b>，与你在同一条时间线上竞速，看他先飞升还是你先陨落。<br><br>
+          修至巅峰（99 级·半步真仙）后，即可发动<b>渡劫拔河</b>：疯狂点击顶住天劫流失，把进度条拉满即白日飞升！若曾得 <b>仙缘</b>，流失更慢、更易成功。<br><br>
+          每局结束获得经验提升玩家等级，并可<b>三选一继承「转世遗泽」</b>带入下一世。<b>每日同参</b>则是全体玩家同一命格的挑战，来比比谁更强！
         </div>
       </div>
     </section>
 
+  </div>
+
+  <!-- ============ 觉醒仪式（长按蓄力） ============ -->
+  <div id="awaken-mask" class="mask" hidden>
+    <div class="mask-box awaken-box">
+      <div class="mask-title">🌟 觉醒仪式</div>
+      <div class="mask-info">长按下方灵台，灌注灵气以觉醒本命灵根</div>
+      <div class="awaken-ring" id="awaken-ring">
+        <div class="awaken-ring-fill" id="awaken-fill"></div>
+        <div class="awaken-core" id="awaken-core">灵</div>
+      </div>
+      <button class="btn btn-primary btn-hold" id="btn-awaken">按住蓄力</button>
+      <div class="awaken-result" id="awaken-result" hidden></div>
+    </div>
+  </div>
+
+  <!-- ============ 抉择事件 ============ -->
+  <div id="choice-mask" class="mask" hidden>
+    <div class="mask-box choice-box">
+      <div class="mask-title" id="choice-title">两难抉择</div>
+      <div class="mask-info" id="choice-text">--</div>
+      <div class="choice-opts" id="choice-opts"></div>
+      <div class="choice-result" id="choice-result" hidden></div>
+    </div>
+  </div>
+
+  <!-- ============ 渡劫拔河 ============ -->
+  <div id="trib-mask" class="mask" hidden>
+    <div class="mask-box trib-box">
+      <div class="mask-title">⚡ 九天雷劫</div>
+      <div class="mask-info" id="trib-info">疯狂点击顶住天劫，把道行拉满即可飞升！</div>
+      <div class="trib-timer" id="trib-timer">8.0s</div>
+      <div class="trib-bar"><div class="trib-bar-fill" id="trib-fill"></div><div class="trib-bar-mark" id="trib-mark"></div></div>
+      <div class="trib-pct" id="trib-pct">0%</div>
+      <button class="btn btn-primary btn-tap" id="btn-trib-tap">抗 劫</button>
+      <div class="trib-result" id="trib-result" hidden></div>
+    </div>
+  </div>
+
+  <!-- ============ 心魔来袭（狂点驱散） ============ -->
+  <div id="demon-mask" class="mask" hidden>
+    <div class="mask-box demon-box">
+      <div class="mask-title">👿 心魔来袭</div>
+      <div class="mask-info">道心蒙尘！狂点凝神，驱散心魔！</div>
+      <div class="demon-bar"><div class="demon-bar-fill" id="demon-fill"></div></div>
+      <button class="btn btn-danger btn-tap" id="btn-demon-tap">凝 神</button>
+      <div class="demon-result" id="demon-result" hidden></div>
+    </div>
+  </div>
+
+  <!-- ============ 天降机缘（限时接取） ============ -->
+  <div id="catch-mask" class="mask" hidden>
+    <div class="mask-box catch-box">
+      <div class="mask-title">✨ 天降机缘</div>
+      <div class="mask-info" id="catch-info">快接住它！</div>
+      <div class="catch-area" id="catch-area">
+        <button class="catch-orb" id="catch-orb">🎁</button>
+      </div>
+      <div class="catch-result" id="catch-result" hidden></div>
+    </div>
   </div>
 
   <!-- ============ 回顾一生弹窗 ============ -->
