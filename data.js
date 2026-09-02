@@ -192,7 +192,10 @@
     { id: "a_combo", name: "势如破竹", desc: "单局达成 15 连破", bonus: 0.4, cond: "comboBest>=15" },
     { id: "a_daily", name: "天命之人", desc: "完成一次每日同参挑战", bonus: 0.3, cond: "dailyDone" },
     { id: "a_dao", name: "高山流水", desc: "与同代宿敌结为道友", bonus: 0.4, cond: "bondFriend" },
-    { id: "a_slain", name: "何生亮", desc: "作为死敌亲手斩落同代宿敌", bonus: 0.6, cond: "slewRival" }
+    { id: "a_slain", name: "何生亮", desc: "作为死敌亲手斩落同代宿敌", bonus: 0.6, cond: "slewRival" },
+    { id: "a_duel3", name: "踏碎探花台", desc: "隐藏成就：在天下榜正面挑战并击败第三名", bonus: 0.5, cond: "duel3", hidden: true },
+    { id: "a_duel2", name: "拽落榜眼冠", desc: "隐藏成就：在天下榜正面挑战并击败第二名", bonus: 0.8, cond: "duel2", hidden: true },
+    { id: "a_duel1", name: "掀翻天下第一", desc: "隐藏成就：在天下榜正面挑战并击败榜首", bonus: 1.2, cond: "duel1", hidden: true }
   ];
 
   /* ---------- 抉择事件：暂停流年，弹出两难选择（risk / reward） ----------
