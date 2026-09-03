@@ -26,6 +26,7 @@
       <div class="coronate-icon" id="coronate-icon">👑</div>
       <div class="coronate-head" id="coronate-head">天下第一！</div>
       <div class="coronate-line" id="coronate-line">--</div>
+      <button class="btn coronate-share" id="btn-coronate-share">📜 昭告天下（复制群文案）</button>
       <div class="coronate-tip">点击任意处继续</div>
     </div>
   </div>
@@ -38,6 +39,7 @@
         <div class="home-sub">——看看你能不能成为白日飞升的那一个？——</div>
       </div>
       <div class="home-count">已有 <b id="home-count">--</b> 位修士觉醒灵根 · 已有 <b id="home-ascend-count">--</b> 位修士飞升成仙</div>
+      <div class="home-fate" id="home-fate" hidden></div>
       <div class="home-streak" id="home-streak" hidden></div>
       <div class="home-saga" id="home-saga" hidden></div>
       <div class="home-lv">
@@ -51,7 +53,7 @@
       </div>
       <div class="home-legacy" id="home-legacy" hidden></div>
       <div class="world-feed" id="world-feed" hidden>
-        <div class="wf-head">🌍 天下频道 · 实时播报</div>
+        <div class="wf-head"><span class="wf-title">🌍 天下频道 · 实时播报</span><i class="wf-dot"></i><button class="wf-shout" id="btn-shout">📢 放话</button></div>
         <div class="wf-list" id="world-feed-list"></div>
       </div>
       <div class="home-btns">
@@ -138,6 +140,7 @@
       <div class="settle-box">
         <div class="settle-title" id="settle-title">--</div>
         <div class="settle-wuhun" id="settle-wuhun">--</div>
+        <div class="settle-fate" id="settle-fate" hidden></div>
         <div class="settle-rows">
           <div class="s-row"><span>修为境界</span><b id="settle-lvl">--</b></div>
           <div class="s-row"><span>战力</span><b id="settle-combat">--</b></div>
@@ -167,6 +170,7 @@
           <button class="btn btn-big" id="btn-settle-review">📜 回顾一生</button>
           <button class="btn btn-big" id="btn-settle-challenge">⚔ 生成挑战码</button>
           <button class="btn btn-big" id="btn-settle-share">📣 炫耀战绩</button>
+          <button class="btn btn-big" id="btn-settle-daily" hidden>📜 同参战报</button>
           <button class="btn btn-big" id="btn-settle-home">返回首页</button>
         </div>
       </div>
@@ -377,6 +381,18 @@
       <button class="btn btn-primary" id="btn-chal-go">接受挑战</button>
       <div class="chal-record" id="chal-record"></div>
       <button class="btn" id="btn-chal-close">关闭</button>
+    </div>
+  </div>
+
+  <!-- ============ 放话弹窗 ============ -->
+  <div id="shout-mask" class="mask" hidden>
+    <div class="mask-box shout-box">
+      <div class="mask-title">📢 向全服放话</div>
+      <div class="mask-info">一句话，会出现在所有修士的首页「天下频道」和局内弹幕里。<br>文明放话，友善挑衅，30 秒一次。</div>
+      <input type="text" class="chal-input shout-input" id="shout-input" maxlength="40" placeholder="例：榜一的，等我三世之后来取你王座！" autocomplete="off">
+      <div class="shout-err" id="shout-err"></div>
+      <button class="btn btn-primary" id="btn-shout-send">放 话</button>
+      <button class="btn" id="btn-shout-close">取消</button>
     </div>
   </div>
 

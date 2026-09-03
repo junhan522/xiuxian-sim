@@ -640,10 +640,17 @@ body {
   font-size: 12px; font-weight: 700; color: #9cc4ff; letter-spacing: 1px;
   margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
 }
-.wf-head::after {
-  content: ""; width: 6px; height: 6px; border-radius: 50%; background: #6fe08a;
+.wf-head .wf-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: #6fe08a;
   box-shadow: 0 0 8px #6fe08a; animation: wfLive 1.4s ease-in-out infinite;
 }
+.wf-head .wf-shout {
+  margin-left: auto; font-size: 11px; font-weight: 700; color: #ffd98a;
+  background: rgba(245, 201, 107, 0.12); border: 1px solid rgba(245, 201, 107, 0.4);
+  border-radius: 8px; padding: 2px 8px; cursor: pointer;
+}
+.wf-head .wf-shout:active { transform: scale(0.95); background: rgba(245, 201, 107, 0.25); }
+.wf-line.wf-empty { color: var(--sub); font-style: italic; border-left-color: var(--line); }
 @keyframes wfLive { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
 .wf-list { display: flex; flex-direction: column; gap: 3px; }
 .wf-line {
@@ -658,3 +665,34 @@ body {
   color: rgba(245, 201, 107, 0.9); font-weight: 700;
   text-shadow: 0 0 8px rgba(245, 201, 107, 0.5), 0 1px 3px rgba(0, 0, 0, 0.7);
 }
+
+/* ---------- 今日天命 ---------- */
+.home-fate {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  border: 1px solid rgba(245, 201, 107, 0.4); border-radius: 12px;
+  padding: 9px 12px; margin: 0 0 12px; font-size: 13px; color: #ffe6ad;
+  background: linear-gradient(90deg, rgba(245,201,107,0.12), rgba(185,138,255,0.06));
+}
+.home-fate .fate-icon { font-size: 18px; filter: drop-shadow(0 0 6px rgba(245,201,107,0.6)); }
+.home-fate .fate-name { font-weight: 800; color: var(--gold2); letter-spacing: 1px; }
+.home-fate .fate-desc { color: var(--sub); font-size: 12px; }
+.settle-fate { margin: 4px 0 8px; font-size: 13px; color: var(--gold2); font-weight: 700; }
+
+/* ---------- 放话弹窗 ---------- */
+.shout-box { display: flex; flex-direction: column; gap: 10px; }
+.shout-input { width: 100%; box-sizing: border-box; }
+.shout-err { min-height: 16px; font-size: 12px; color: var(--red); text-align: center; }
+
+/* ---------- 战书 / 昭告 按钮 ---------- */
+.lb-letter {
+  margin-left: 4px; font-size: 12px; line-height: 1; padding: 4px 6px;
+  background: rgba(185, 138, 255, 0.14); color: #d9c2ff;
+  border: 1px solid rgba(185, 138, 255, 0.45); border-radius: 8px; cursor: pointer;
+}
+.lb-letter:active { transform: scale(0.94); background: rgba(185, 138, 255, 0.3); }
+.coronate-share {
+  position: relative; margin-top: 14px; font-weight: 700;
+  background: rgba(245, 201, 107, 0.16); color: var(--gold2);
+  border: 1px solid var(--gold); border-radius: 10px; padding: 8px 16px; cursor: pointer;
+}
+.coronate-share:active { transform: scale(0.96); }

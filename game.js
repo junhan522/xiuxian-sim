@@ -211,6 +211,14 @@
     $("codex-tip").textContent = "已收集 " + cx.got + " / " + cx.total;
     $("chal-tip").textContent = save.chal.w + save.chal.l > 0
       ? ("挑战战绩 " + save.chal.w + " 胜 " + save.chal.l + " 负") : "同参一战，比拼战力";
+    var fate = todayFate();
+    var hf = $("home-fate");
+    if (hf) {
+      hf.hidden = false;
+      hf.innerHTML = '<span class="fate-icon">' + fate.icon + '</span>' +
+        '<span class="fate-name">今日天命 · ' + fate.name + '</span>' +
+        '<span class="fate-desc">' + fate.desc + '</span>';
+    }
     paintWorldFeed();
   }
   function dateStr(d) {
@@ -752,6 +760,19 @@
     { t: 6.0, drain: 8, click: 10 }
   ];
   var DUEL_ACH = ["a_duel1", "a_duel2", "a_duel3"];
+  var DUEL_WIN_LINES = [
+    "🏆 挑战成功！你正面击溃了天下榜第{r}位「{f}」！",
+    "🏆 酣畅淋漓！天下榜第{r}位「{f}」在你拳下跌落神坛！",
+    "🏆 以弱胜强！你硬生生把第{r}位「{f}」从王座上拽了下来！"
+  ];
+  var DUEL_LOSE_LINES = [
+    "💥 惜败（{w}）……第{r}位「{f}」依旧稳坐其上，再来！",
+    "💥 功亏一篑（{w}）……「{f}」的第{r}位暂且保住了，下一世必取！",
+    "💥 力竭而败（{w}）……第{r}位「{f}」冷笑：还不够格！"
+  ];
+  function duelLine(pool, idx, foeName, why) {
+    return pick(pool).replace("{r}", idx + 1).replace("{f}", foeName).replace("{w}", why || "");
+  }
   var duelRaf = null;
   function openDuel(idx, foe) {
     if (!foe) return;
@@ -794,14 +815,14 @@
       res.hidden = false;
       if (win) {
         res.className = "trib-result duel-result win";
-        res.innerHTML = "🏆 挑战成功！你正面击溃了天下榜第" + (idx + 1) + "位「" + foeName + "」！";
+        res.innerHTML = duelLine(DUEL_WIN_LINES, idx, foeName, why);
         sGold();
         spawnConfetti(["#f5c96b", "#ffd98a", "#ffffff", "#b98aff"], 70);
         unlockDuelAch(idx);
         postFeed("duel_win", foe.nickname || "无名散修", "");
       } else {
         res.className = "trib-result duel-result lose";
-        res.innerHTML = "💥 惜败（" + (why || "") + "）……第" + (idx + 1) + "位「" + foeName + "」依旧稳坐其上，再来！";
+        res.innerHTML = duelLine(DUEL_LOSE_LINES, idx, foeName, why);
         sDown();
         postFeed("duel_lose", foe.nickname || "无名散修", "");
       }
@@ -826,17 +847,32 @@
   }
 
   /* ---------------- 荣登前三·加冕（情绪拉满） ---------------- */
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
   var CORONATE = {
-    1: { icon: "👑", head: "天下第一！", line: "万众俯首！你以凡躯踏碎天门，自今日起——<b>天下榜首刻汝名</b>！八方修士仰视你的战力，后来者皆以你为峰！" },
-    2: { icon: "🥈", head: "榜眼及第！", line: "一人之下，万人之上！你距那座至高王座仅半步之遥，<b>全榜都记住了这个逼视榜首的名字</b>！" },
-    3: { icon: "🥉", head: "探花登榜！", line: "鼎足而立！你硬生生杀入天下前三，<b>榜上金字从此有你一枚</b>，无数修士在你身后望尘莫及！" }
+    1: { icon: "👑", head: "天下第一！", line: [
+      "万众俯首！你以凡躯踏碎天门，自今日起——<b>天下榜首刻汝名</b>！八方修士仰视你的战力，后来者皆以你为峰！",
+      "王座易主？不，是<b>新皇登基</b>！全网修士抬头所见，皆是你高悬榜首的名字！这一世，你就是天！",
+      "千军万马过独木桥，而你<b>踩着整座天下登了顶</b>！从今往后，『天下第一』四个字，姓你的姓！"
+    ] },
+    2: { icon: "🥈", head: "榜眼及第！", line: [
+      "一人之下，万人之上！你距那座至高王座仅半步之遥，<b>全榜都记住了这个逼视榜首的名字</b>！",
+      "银光加身！你与榜首之间只隔着一层窗户纸，<b>下一世捅破它，王座就是你的</b>！",
+      "屈居榜眼？不，这是<b>蓄势待发</b>！整座天下都在等你掀翻榜首的那一刻！"
+    ] },
+    3: { icon: "🥉", head: "探花登榜！", line: [
+      "鼎足而立！你硬生生杀入天下前三，<b>榜上金字从此有你一枚</b>，无数修士在你身后望尘莫及！",
+      "三甲之列！你用一世修为凿穿了天梯，<b>把自己的名字钉在了天下第三</b>！",
+      "探花及第，金榜题名！从此天下修士提起前三，<b>必念你的名字</b>！"
+    ] }
   };
   function coronate(pos, nick) {
     var c = CORONATE[pos], box = $("coronate");
     if (!c || !box) return;
+    coronateInfo = { pos: pos, nick: nick, combat: (run && run._finalCombat) || 0 };
     $("coronate-icon").textContent = c.icon;
     $("coronate-head").textContent = c.head;
-    $("coronate-line").innerHTML = "「" + esc(nick) + "」荣登天下榜·第" + pos + "位！<br>" + c.line;
+    var lineTxt = Array.isArray(c.line) ? pick(c.line) : c.line;
+    $("coronate-line").innerHTML = "「" + esc(nick) + "」荣登天下榜·第" + pos + "位！<br>" + lineTxt;
     box.hidden = false;
     box.classList.remove("go");
     void box.offsetWidth;
@@ -860,6 +896,8 @@
     duel_win:  function (f) { return "⚔ " + f.actor + " 正面击溃榜上高手「" + (f.target || "无名") + "」，一战封神！"; },
     duel_lose: function (f) { return "💥 " + f.actor + " 挑战「" + (f.target || "无名") + "」惜败，跌坐尘埃，来日再战……"; },
     ascend:    function (f) { return "🌈 " + f.actor + " 白日飞升，战力 " + (f.extra || "惊人") + "，名动天下！"; },
+    shout:     function (f) { return "📢 " + f.actor + " 放话：" + (f.extra || "……"); },
+    dethrone:  function (f) { return "⚡ 天变！" + f.actor + " 掀翻了「" + (f.target || "旧主") + "」，登顶天下榜！"; },
     upload:    function (f) { return "📣 " + f.actor + " 登榜天下，战力 " + (f.extra || "不凡") + "。"; }
   };
   function feedText(f) {
@@ -867,18 +905,42 @@
     return fn ? fn(f) : "🌍 " + ((f && f.actor) || "无名散修") + " 在天下留下了足迹。";
   }
   /* 发一条广播（尽力而为，失败静默，绝不影响游戏） */
-  function postFeed(kind, target, extra) {
+  function broadcast(kind, actor, target, extra) {
     if (!window.Net || !Net.enabled()) return;
     try {
-      var p = Net.postFeed(kind, save.nickname || "无名散修", target, extra);
+      var p = Net.postFeed(kind, actor, target, extra);
       if (p && p.catch) p.catch(function () {});
     } catch (e) {}
+  }
+  function postFeed(kind, target, extra) {
+    broadcast(kind, save.nickname || "无名散修", target, extra);
+  }
+  /* 榜首易主检测：#1 换人时全服播报（localStorage 去重，避免重复刷屏） */
+  function checkDethrone(rows) {
+    if (!rows || !rows.length) return;
+    var top = rows[0];
+    var nick = top.nickname || "无名散修";
+    var key = nick + "|" + (top.combat || 0);
+    var prev = save._top1 || "";
+    if (!prev) { save._top1 = key; persist(); return; }
+    if (prev === key) return;
+    var prevNick = prev.split("|")[0];
+    save._top1 = key; persist();
+    if (prevNick && prevNick !== nick) {
+      broadcast("dethrone", nick, prevNick, "");
+      setTimeout(refreshWorldFeed, 800);
+    }
   }
   function paintWorldFeed() {
     var box = $("world-feed"), list = $("world-feed-list");
     if (!box || !list) return;
-    if (!worldFeeds.length) { box.hidden = true; return; }
+    var netOn = window.Net && Net.enabled();
+    if (!netOn) { box.hidden = true; return; }
     box.hidden = false;
+    if (!worldFeeds.length) {
+      list.innerHTML = '<div class="wf-line wf-empty">天下还很安静……点右上角「📢 放话」，做第一个喊话的人！</div>';
+      return;
+    }
     list.innerHTML = worldFeeds.slice(0, 5).map(function (f) {
       return '<div class="wf-line">' + feedText(f) + "</div>";
     }).join("");
@@ -886,14 +948,52 @@
   function refreshWorldFeed() {
     if (!window.Net || !Net.enabled()) return;
     Net.feeds(12).then(function (rows) {
-      if (rows && rows.length) { worldFeeds = rows; paintWorldFeed(); }
+      worldFeeds = (rows && rows.length) ? rows : [];
+      paintWorldFeed();
     }).catch(function () {});
+  }
+  /* ---------------- 放话（全服垃圾话广播） ---------------- */
+  var SHOUT_COOLDOWN = 30000;
+  function openShout() {
+    var mask = $("shout-mask"); if (!mask) return;
+    var inp = $("shout-input"); if (inp) inp.value = "";
+    var err = $("shout-err"); if (err) err.textContent = "";
+    mask.hidden = false;
+    setTimeout(function () { if (inp) inp.focus(); }, 60);
+  }
+  function sendShout() {
+    var inp = $("shout-input"), err = $("shout-err");
+    var txt = ((inp && inp.value) || "").replace(/[<>]/g, "").trim().slice(0, 40);
+    if (!txt) { if (err) err.textContent = "先写一句狠话再放！"; return; }
+    var now = Date.now(), last = save._lastShout || 0;
+    if (now - last < SHOUT_COOLDOWN) {
+      if (err) err.textContent = "放话太频繁，" + Math.ceil((SHOUT_COOLDOWN - (now - last)) / 1000) + " 秒后再来";
+      return;
+    }
+    save._lastShout = now; persist();
+    postFeed("shout", "", txt);
+    var mask = $("shout-mask"); if (mask) mask.hidden = true;
+    toast("📢 放话已发出，全服修士都能听到！");
+    setTimeout(refreshWorldFeed, 800);
   }
   function startWorldFeed() {
     if (wfTimer) return;
     refreshWorldFeed();
     wfTimer = setInterval(refreshWorldFeed, 20000);
   }
+
+  /* ---------------- 今日天命（每日全服同一卦象，日期种子） ---------------- */
+  function fateOfDay(dateString) {
+    var pool = (window.D && D.DAILY_FATE) || [];
+    var fallback = { name: "平淡之日", icon: "🍵", mult: 1, desc: "无事发生，喝口茶慢慢修" };
+    if (!pool.length) return fallback;
+    var s = String(dateString || dateStr());
+    var h = 0;
+    for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; }
+    return pool[h % pool.length] || fallback;
+  }
+  function todayFate() { return fateOfDay(dateStr()); }
+  function fateMult() { var f = todayFate(); return (typeof f.mult === "number" && f.mult > 0) ? f.mult : 1; }
 
   /* ---------------- 弹幕 ---------------- */
   function startDanmaku() {
@@ -931,6 +1031,12 @@
 
     var baseCombat = Sim.combatOf(run);
     var finalCombat = run.ascended ? (run.finalCombat || Math.round(baseCombat * (run.xianyuan ? run.xianyuan.rate : 1))) : baseCombat;
+
+    /* 今日天命加成（全服当日同一卦象；挑战码局不参与，保证同码公平） */
+    run.fate = todayFate();
+    if (!chalMode && run.fate.mult && run.fate.mult !== 1) {
+      finalCombat = Math.round(finalCombat * run.fate.mult);
+    }
 
     /* 宿敌胜负 + 羁绊结算（死敌斩落 → 战力暴涨，需在入榜前生效） */
     var beatRival = (run.ascended && !run.rival.ascended) || run.lvl > run.rival.finalLvl;
@@ -992,11 +1098,19 @@
     /* 结算界面 */
     $("settle-title").textContent = D.runTitle(run);
     $("settle-wuhun").innerHTML = "灵根：<b>" + run.root + "</b>　资质：" + run.apt + "（" + D.APT_TITLES[run.apt] + "）";
+    var sf = $("settle-fate");
+    if (sf) {
+      if (run.fate && run.fate.mult && run.fate.mult !== 1) {
+        sf.hidden = false;
+        sf.innerHTML = run.fate.icon + " 今日天命·" + run.fate.name + "：战力 ×" + run.fate.mult + "（全服当日同卦）";
+      } else { sf.hidden = true; sf.innerHTML = ""; }
+    }
     $("settle-lvl").textContent = run.lvl + " 级（" + D.REALMS[Sim.realmOf(run.lvl)] + "）";
     $("settle-combat").textContent = Sim.fmtNum(finalCombat);
     $("settle-age").textContent = run.age + " 岁";
     $("settle-combo").textContent = run.comboBest + " 连破";
     $("settle-exp").textContent = "+" + exp;
+    var dbtn = $("btn-settle-daily"); if (dbtn) dbtn.hidden = !dailyMode;
 
     var god = $("settle-god");
     if (run.ascended) {
@@ -1142,12 +1256,21 @@
   /* ---------------- 炫耀战绩 ---------------- */
   function shareRun() {
     if (!run) return;
-    var finalCombat = finalCombatOf(run);
+    var finalCombat = run._finalCombat || finalCombatOf(run);
     var beat = (run.ascended && !run.rival.ascended) || run.lvl > run.rival.finalLvl;
+    var fate = run.fate || todayFate();
+    var fateNote = (fate && fate.mult && fate.mult !== 1) ? "（今日天命·" + fate.name + " ×" + fate.mult + "）" : "";
+    var hook = pick([
+      " 你能成仙吗？",
+      " 群里来战，敢不敢接？",
+      " 不服？同一命格比比看！",
+      " 我在天下榜等你抬头看我。",
+      " 这把放群里能排第几？"
+    ]);
     var txt = "我在《修仙模拟器》觉醒「" + run.root + "」（资质 " + run.apt + "），修至 " + run.lvl + " 级·" +
       D.REALMS[Sim.realmOf(run.lvl)] + (run.ascended ? "，白日飞升！" : "。") +
-      " 战力 " + Sim.fmtNum(finalCombat) + "，" + (beat ? "一世碾压宿敌「" + run.rival.name + "」！" : "惜败宿敌「" + run.rival.name + "」。") +
-      " 你能成仙吗？";
+      " 战力 " + Sim.fmtNum(finalCombat) + fateNote + "，" +
+      (beat ? "一世碾压宿敌「" + run.rival.name + "」！" : "惜败宿敌「" + run.rival.name + "」。") + hook;
     copyText(txt, "📣 战绩已复制，快去粘贴炫耀！");
   }
 
@@ -1158,6 +1281,36 @@
     var txt = "【修仙模拟器·挑战码】" + code + " —— 我这一世战力 " + Sim.fmtNum(finalCombatOf(run)) +
       "，用同一命格来比比谁更强！粘贴到「⚔ 挑战码」即可应战。";
     copyText(txt, "⚔ 挑战码已复制：" + code);
+  }
+
+  /* ---------------- 微信群文案：战书 / 昭告 / 同参战报 ---------------- */
+  var coronateInfo = null; /* 最近一次加冕信息，供"昭告天下"复制 */
+  function copyChallengeLetter(foe, idx) {
+    if (!foe) return;
+    var nick = save.nickname || "无名散修";
+    var medal = idx === 0 ? "榜首" : idx === 1 ? "榜眼" : "探花";
+    var txt = "【问鼎战书】" + nick + " 正式向天下榜第" + (idx + 1) + "位「" + (foe.nickname || "无名散修") +
+      "」（" + medal + "）下战书！\n阁下战力 " + Sim.fmtNum(foe.combat || 0) +
+      "，吾虽不才，三世之内必取汝王座！\n敢接吗？接了就来《修仙模拟器》天下榜应战！";
+    copyText(txt, "📜 战书已复制，甩到群里去！");
+  }
+  function copyEdict() {
+    var c = coronateInfo; if (!c) return;
+    var flair = c.pos === 1 ? "自今日起天下榜首刻吾名，万众俯首！"
+              : c.pos === 2 ? "一人之下万人之上，王座半步之遥！"
+              : "鼎足而立，金榜留名！";
+    var txt = "【加冕昭告】" + c.nick + " 于《修仙模拟器》荣登天下榜·第" + c.pos + "位！\n" +
+      "战力 " + Sim.fmtNum(c.combat || 0) + "，" + flair + "\n群内诸修，不服来战！";
+    copyText(txt, "📜 昭告已复制，昭告天下！");
+  }
+  function copyDailyReport() {
+    if (!run) return;
+    var code = makeChalCode();
+    var txt = "【今日同参战报·" + dateStr() + "】我 " + (save.nickname || "无名散修") + " 觉醒「" + run.root + "」，修至 " +
+      run.lvl + " 级·" + D.REALMS[Sim.realmOf(run.lvl)] + (run.ascended ? "，白日飞升！" : "。") +
+      " 战力 " + Sim.fmtNum(run._finalCombat || finalCombatOf(run)) + "。\n今日天命·" + todayFate().name +
+      "。\n同参道友来比！应战码：" + code;
+    copyText(txt, "📜 同参战报已复制，发到群里比拼！");
   }
 
   /* ---------------- 排行榜 ---------------- */
@@ -1226,6 +1379,7 @@
       if (!rows || !rows.length) { body.innerHTML = '<div class="lb-tip">天下榜还没有人上榜，来做第一个！</div>'; return; }
       var myNick = Net.cleanNick(save.nickname);
       var combatMode = cur === "combat";
+      if (combatMode) checkDethrone(rows);
       body.innerHTML = rows.map(function (b, i) {
         var medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : (i + 1);
         var label = esc(b.nickname || "无名散修") + " <span style=\"color:#8fa2c4\">·" + esc(b.root || "") + "</span>" +
@@ -1243,7 +1397,8 @@
           '<span class="lb-name">' + label + "</span>" +
           '<span class="lb-realm">' + esc(b.realm || "") + "·" + (b.lvl || 0) + "级</span>" +
           '<b class="lb-val">' + val + "</b>" +
-          ((combatMode && i < 3) ? '<button class="lb-duel" data-duel="' + i + '">⚔ 去挑战</button>' : "") +
+          ((combatMode && i < 3) ? '<button class="lb-duel" data-duel="' + i + '">⚔ 去挑战</button>' +
+            '<button class="lb-letter" data-letter="' + i + '" title="复制问鼎战书，甩到群里">📜</button>' : "") +
           "</div>";
       }).join("");
       if (combatMode) {
@@ -1251,6 +1406,12 @@
           btn.onclick = function () {
             var idx = parseInt(btn.getAttribute("data-duel"), 10);
             openDuel(idx, rows[idx]);
+          };
+        });
+        Array.prototype.forEach.call(body.querySelectorAll(".lb-letter"), function (btn) {
+          btn.onclick = function () {
+            var idx = parseInt(btn.getAttribute("data-letter"), 10);
+            copyChallengeLetter(rows[idx], idx);
           };
         });
       }
@@ -1321,6 +1482,9 @@
     $("btn-codex").onclick = function () { renderCodex(); show("view-codex"); };
     $("btn-chal").onclick = function () { openChallenge(); };
     $("btn-chal-close").onclick = function () { $("challenge-mask").hidden = true; };
+    $("btn-shout").onclick = function () { openShout(); };
+    $("btn-shout-send").onclick = function () { sendShout(); };
+    $("btn-shout-close").onclick = function () { $("shout-mask").hidden = true; };
     $("btn-chal-go").onclick = function () {
       var code = parseChalCode($("chal-input").value);
       if (!code) { $("chal-record").innerHTML = '<span class="lose">挑战码格式有误</span>，应形如 AX3F9-128000'; return; }
@@ -1357,6 +1521,8 @@
     $("btn-settle-review").onclick = openReview;
     $("btn-settle-share").onclick = shareRun;
     $("btn-settle-challenge").onclick = genChallenge;
+    $("btn-settle-daily").onclick = copyDailyReport;
+    $("btn-coronate-share").onclick = function (e) { e.stopPropagation(); copyEdict(); };
     var snk = $("settle-nick");
     if (snk) snk.oninput = function () { save.nickname = snk.value.replace(/[<>]/g, "").slice(0, 12); persist(); };
     var upBtn = $("btn-settle-upload");
