@@ -42,6 +42,7 @@
       <div class="home-fate" id="home-fate" hidden></div>
       <div class="home-streak" id="home-streak" hidden></div>
       <div class="home-saga" id="home-saga" hidden></div>
+      <div class="home-grudge" id="home-grudge" hidden></div>
       <div class="home-lv">
         <div class="lv-head">
           <span class="lv-name">玩家等级</span>
@@ -53,7 +54,7 @@
       </div>
       <div class="home-legacy" id="home-legacy" hidden></div>
       <div class="world-feed" id="world-feed" hidden>
-        <div class="wf-head"><span class="wf-title">🌍 天下频道 · 实时播报</span><i class="wf-dot"></i><button class="wf-shout" id="btn-shout">📢 放话</button></div>
+        <div class="wf-head"><span class="wf-title">🌍 天下频道 · 实时播报</span><i class="wf-dot"></i><button class="wf-shout" id="btn-weekly">📊 战报</button><button class="wf-shout" id="btn-shout">📢 发声</button></div>
         <div class="wf-list" id="world-feed-list"></div>
       </div>
       <div class="home-btns">
@@ -353,7 +354,7 @@
   <div id="demon-mask" class="mask" hidden>
     <div class="mask-box demon-box">
       <div class="mask-title">👿 心魔来袭</div>
-      <div class="mask-info">道心蒙尘！狂点凝神，驱散心魔！</div>
+      <div class="mask-info" id="demon-info">道心蒙尘！狂点凝神，驱散心魔！</div>
       <div class="demon-bar"><div class="demon-bar-fill" id="demon-fill"></div></div>
       <button class="btn btn-danger btn-tap" id="btn-demon-tap">凝 神</button>
       <div class="demon-result" id="demon-result" hidden></div>
@@ -384,11 +385,17 @@
     </div>
   </div>
 
-  <!-- ============ 放话弹窗 ============ -->
+  <!-- ============ 发声弹窗（放话 / 檄文宣战 / 悬赏令） ============ -->
   <div id="shout-mask" class="mask" hidden>
     <div class="mask-box shout-box">
-      <div class="mask-title">📢 向全服放话</div>
-      <div class="mask-info">一句话，会出现在所有修士的首页「天下频道」和局内弹幕里。<br>文明放话，友善挑衅，30 秒一次。</div>
+      <div class="mask-title" id="shout-title">📢 向全服放话</div>
+      <div class="shout-tabs" id="shout-tabs">
+        <button class="shout-tab active" data-mode="shout">📢 放话</button>
+        <button class="shout-tab" data-mode="war">🔥 檄文</button>
+        <button class="shout-tab" data-mode="bounty">💰 悬赏</button>
+      </div>
+      <div class="mask-info" id="shout-info">一句话，会出现在所有修士的首页「天下频道」和局内弹幕里。<br>文明放话，友善挑衅，30 秒一次。</div>
+      <input type="text" class="chal-input shout-target" id="shout-target" maxlength="12" placeholder="对手昵称（天下榜上的名字）" autocomplete="off" hidden>
       <input type="text" class="chal-input shout-input" id="shout-input" maxlength="40" placeholder="例：榜一的，等我三世之后来取你王座！" autocomplete="off">
       <div class="shout-err" id="shout-err"></div>
       <button class="btn btn-primary" id="btn-shout-send">放 话</button>
