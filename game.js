@@ -716,8 +716,11 @@
     $("equip-desc").textContent = item.desc;
     $("equip-effect").textContent = eqEffectText(item);
     var btn = $("btn-equip-take");
+    btn.disabled = false;
+    btn.textContent = "收入囊中";
     btn.onclick = function () {
       btn.disabled = true;
+      btn.textContent = "已收入";
       var got = Sim.collectEquipment(run, item);
       var isNew = recordEquipment(item.name);
       var entry = {
