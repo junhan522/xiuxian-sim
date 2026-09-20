@@ -43,6 +43,8 @@
       <div class="home-streak" id="home-streak" hidden></div>
       <div class="home-saga" id="home-saga" hidden></div>
       <div class="home-grudge" id="home-grudge" hidden></div>
+      <div class="home-trait" id="home-trait" hidden></div>
+      <div class="home-equipment" id="home-equipment" hidden></div>
       <div class="home-lv">
         <div class="lv-head">
           <span class="lv-name">玩家等级</span>
@@ -116,6 +118,10 @@
           <div class="attr-name">战力</div>
           <div class="attr-val" id="attr-combat">--</div>
         </div>
+        <div class="attr-card">
+          <div class="attr-name">魅力</div>
+          <div class="attr-val" id="attr-charm">0</div>
+        </div>
       </div>
       <!-- 宿敌进度对照 -->
       <div class="rival-bar" id="rival-bar">
@@ -157,6 +163,11 @@
         <div class="settle-regret" id="settle-regret" hidden></div>
         <div class="settle-miss" id="settle-miss" hidden></div>
         <div class="settle-rank" id="settle-rank">--</div>
+        <div class="settle-trait" id="settle-trait" hidden></div>
+        <div class="settle-equip" id="settle-equip" hidden>
+          <div class="legacy-head">🎒 转世携带 · 本世掉落与出生法宝，最多 3 件</div>
+          <div class="equip-cards" id="equip-cards"></div>
+        </div>
         <div class="settle-legacy" id="settle-legacy" hidden>
           <div class="legacy-head">🕯 转世遗泽 · 三选一，带入下一世</div>
           <div class="legacy-cards" id="legacy-cards"></div>
@@ -264,6 +275,7 @@
           修炼途中会弹出<b>两难抉择</b>、天降<b>机缘</b>（手快接住）、心魔来袭（狂点驱散）；你还会遇到一位<b>同代宿敌</b>，与你在同一条时间线上竞速，看他先飞升还是你先陨落。<br><br>
           与宿敌狭路相逢时，可<b>结为道友</b>（论道相助、渡劫护道）或<b>立为死敌</b>（被压制则愤而精进、斩落他战力暴涨）；这份恩怨会化作「道谊 / 宿怨」<b>跨越轮回</b>，福泽或磨砺你的每一世。<br><br>
           修至巅峰（99 级·半步真仙）后，即可发动<b>渡劫拔河</b>：疯狂点击顶住天劫流失，把进度条拉满即白日飞升！若曾得 <b>仙缘</b>，流失更慢、更易成功。<br><br>
+          每次转世还会获得一个新的<b>命格词条</b>，有吉有凶；它会在下一世修行途中随机触发增益或减益。修仙途中偶尔会掉落<b>法宝装备</b>，结算时可选择最多 3 件带入下一世，出生时便已生效。<br><br>
           每局结束获得经验提升玩家等级，并可<b>三选一继承「转世遗泽」</b>带入下一世。<b>每日同参</b>则是全体玩家同一命格的挑战，来比比谁更强！<br><br>
           结算时可录入昵称<b>上传「天下榜」</b>，在 🏆仙榜 → 🌐天下榜 与全网修士一较高下！
         </div>
@@ -370,6 +382,17 @@
         <button class="catch-orb" id="catch-orb">🎁</button>
       </div>
       <div class="catch-result" id="catch-result" hidden></div>
+    </div>
+  </div>
+
+  <!-- ============ 法宝装备掉落 ============ -->
+  <div id="equip-mask" class="mask" hidden>
+    <div class="mask-box equip-box">
+      <div class="mask-title">🎒 法宝现世</div>
+      <div class="equip-name" id="equip-name">--</div>
+      <div class="equip-desc" id="equip-desc">--</div>
+      <div class="equip-effect" id="equip-effect">--</div>
+      <button class="btn btn-primary" id="btn-equip-take">收入囊中</button>
     </div>
   </div>
 

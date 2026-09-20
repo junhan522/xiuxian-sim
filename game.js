@@ -17,15 +17,20 @@
         if (!s.legacy) s.legacy = null;
         if (s.danmaku === undefined) s.danmaku = true;
         if (!s.daily) s.daily = { date: "", done: false };
-        if (!s.codex) s.codex = { roots: {}, xy: {}, lg: {} };
+        if (!s.codex) s.codex = { roots: {}, xy: {}, lg: {}, tr: {}, eq: {} };
         if (!s.codex.roots) s.codex.roots = {};
         if (!s.codex.xy) s.codex.xy = {};
         if (!s.codex.lg) s.codex.lg = {};
+        if (!s.codex.tr) s.codex.tr = {};
+        if (!s.codex.eq) s.codex.eq = {};
         if (!s.streak) s.streak = { last: "", n: 0 };
         if (!s.chal) s.chal = { w: 0, l: 0 };
         if (!s.saga) s.saga = { dao: 0, grudge: 0, allies: 0, feuds: 0, slain: 0, lastBond: null, lastName: "" };
         if (typeof s.nickname !== "string") s.nickname = "";
         if (!s._debts || typeof s._debts !== "object") s._debts = {};
+        if (!s.traitBook || typeof s.traitBook !== "object") s.traitBook = {};
+        if (typeof s.nextTrait !== "string" || !s.nextTrait) s.nextTrait = null;
+        if (!Array.isArray(s.carriedEquipment)) s.carriedEquipment = [];
         return s;
       }
     } catch (e) {}
@@ -37,12 +42,15 @@
       everXianyuan: false,
       legacy: null,                 /* { key: true } 转世遗泽 */
       daily: { date: "", done: false },
-      codex: { roots: {}, xy: {}, lg: {} },   /* 图鉴收集 */
+      codex: { roots: {}, xy: {}, lg: {}, tr: {}, eq: {} },   /* 图鉴收集 */
       streak: { last: "", n: 0 },             /* 连续签到 */
       chal: { w: 0, l: 0 },                   /* 挑战码战绩 */
       saga: { dao: 0, grudge: 0, allies: 0, feuds: 0, slain: 0, lastBond: null, lastName: "" }, /* 恩怨录（累世） */
       nickname: "",                           /* 天下榜昵称 */
-      _debts: {}                              /* 仇榜：曾败于某人 nickname -> 次数 */
+      _debts: {},                             /* 仇榜：曾败于某人 nickname -> 次数 */
+      traitBook: {},                          /* 命格词条图鉴 */
+      nextTrait: null,                        /* 下一世命格词条 id */
+      carriedEquipment: []                    /* 下一世携带的法宝 id */
     };
   }
   function persist() { try { localStorage.setItem(STORE_KEY, JSON.stringify(save)); } catch (e) {} }
@@ -176,6 +184,48 @@
     for (var i = 0; i < D.LEGACIES.length; i++) if (save.legacy[D.LEGACIES[i].key]) return D.LEGACIES[i];
     return null;
   }
+  function findTrait(id) {
+    for (var i = 0; i < D.TRAITS.length; i++) if (D.TRAITS[i].id === id) return D.TRAITS[i];
+    return null;
+  }
+  function findEquip(id) {
+    for (var i = 0; i < D.EQUIPMENT.length; i++) if (D.EQUIPMENT[i].id === id) return D.EQUIPMENT[i];
+    return null;
+  }
+  function ensureNextTrait() {
+    if (save.nextTrait && findTrait(save.nextTrait)) return save.nextTrait;
+    return rollNextTrait();
+  }
+  function rollNextTrait() {
+    var pool = D.TRAITS.slice();
+    if (save.nextTrait) {
+      pool = pool.filter(function (t) { return t.id !== save.nextTrait; });
+      if (!pool.length) pool = D.TRAITS.slice();
+    }
+    var tr = pool[Math.floor(Math.random() * pool.length)];
+    save.nextTrait = tr.id;
+    save.traitBook[tr.id] = (save.traitBook[tr.id] || 0) + 1;
+    if (!save.codex.tr[tr.name]) save.codex.tr[tr.name] = true;
+    persist();
+    return tr.id;
+  }
+  function eqEffectText(eq) {
+    var arr = [];
+    if (eq.charm) arr.push("魅力 +" + eq.charm);
+    if (eq.combatMul) arr.push("战力 ×" + eq.combatMul);
+    if (eq.breakMul) arr.push("突破概率 ×" + eq.breakMul);
+    if (eq.xpMul) arr.push("感悟 ×" + eq.xpMul);
+    if (eq.eff) {
+      var keys = Object.keys(eq.eff);
+      for (var i = 0; i < keys.length; i++) {
+        var v = eq.eff[keys[i]];
+        var names = { life: "寿元", xp: "感悟", combat: "战力" };
+        if (!names[keys[i]]) continue;
+        arr.push(names[keys[i]] + (v[0] >= 0 ? " +" : " ") + v[0] + "~" + (v[1] >= 0 ? "+" : "") + v[1]);
+      }
+    }
+    return arr.length ? arr.join(" · ") : "无额外效果";
+  }
   function renderHome() {
     $("home-count").textContent = save.runs;
     $("home-ascend-count").textContent = save.ascends;
@@ -188,6 +238,21 @@
     var lg = legacyLabel(), el = $("home-legacy");
     if (lg) { el.hidden = false; el.innerHTML = "🕯 已继承遗泽：<b>" + lg.name + "</b>　" + lg.desc; }
     else el.hidden = true;
+    var nextTraitId = ensureNextTrait();
+    var nextTrait = findTrait(nextTraitId);
+    var ht = $("home-trait");
+    if (nextTrait && ht) {
+      ht.hidden = false;
+      var icon = nextTrait.kind === "凶" ? "☠" : nextTrait.kind === "吉" ? "✨" : "☯";
+      ht.innerHTML = '<span class="trait-kind ' + nextTrait.kind + '">' + icon + " " + nextTrait.kind + "</span>" +
+        "下一世命格词条：<b>" + nextTrait.name + "</b>　" + nextTrait.desc;
+    } else if (ht) ht.hidden = true;
+    var carried = (save.carriedEquipment || []).map(function (id) { return findEquip(id); }).filter(Boolean);
+    var he = $("home-equipment");
+    if (carried.length && he) {
+      he.hidden = false;
+      he.innerHTML = "🎒 下一世携宝（" + carried.length + " 件）：" + carried.map(function (e) { return e.icon + " " + e.name; }).join("、");
+    } else if (he) he.hidden = true;
     var today = dateStr();
     $("daily-tip").textContent = save.daily.date === today && save.daily.done
       ? "今日命格已挑战 · 明日再来" : "今日全体修士同一命格，来比比谁更强";
@@ -259,6 +324,7 @@
   function recordRoot(name) { if (!name) return false; var isNew = !save.codex.roots[name]; save.codex.roots[name] = (save.codex.roots[name] || 0) + 1; persist(); return isNew; }
   function recordXY(name) { if (!name) return false; var isNew = !save.codex.xy[name]; save.codex.xy[name] = (save.codex.xy[name] || 0) + 1; persist(); return isNew; }
   function recordLG(name) { if (!name) return false; var isNew = !save.codex.lg[name]; save.codex.lg[name] = true; persist(); return isNew; }
+  function recordEquipment(name) { if (!name) return false; var isNew = !save.codex.eq[name]; save.codex.eq[name] = (save.codex.eq[name] || 0) + 1; persist(); return isNew; }
   function codexProgress() {
     var total = 0, got = 0, apt, i;
     for (apt = 1; apt <= 10; apt++) {
@@ -267,13 +333,15 @@
     }
     for (i = 0; i < D.XIAN_YUAN.length; i++) { total++; if (save.codex.xy[D.XIAN_YUAN[i].name]) got++; }
     for (i = 0; i < D.LEGACIES.length; i++) { total++; if (save.codex.lg[D.LEGACIES[i].name]) got++; }
+    for (i = 0; i < D.TRAITS.length; i++) { total++; if (save.codex.tr[D.TRAITS[i].name]) got++; }
+    for (i = 0; i < D.EQUIPMENT.length; i++) { total++; if (save.codex.eq[D.EQUIPMENT[i].name]) got++; }
     return { got: got, total: total };
   }
   var codexTab = "root";
   function renderCodex() {
     var prog = codexProgress();
     $("codex-total").textContent = "收集进度：" + prog.got + " / " + prog.total;
-    var tabs = [{ id: "root", name: "🌱 灵根" }, { id: "xy", name: "✨ 仙缘" }, { id: "lg", name: "🕯 遗泽" }];
+    var tabs = [{ id: "root", name: "🌱 灵根" }, { id: "xy", name: "✨ 仙缘" }, { id: "lg", name: "🕯 遗泽" }, { id: "tr", name: "☯ 命格" }, { id: "eq", name: "🎒 法宝" }];
     $("codex-tabs").innerHTML = tabs.map(function (t) {
       return '<button class="codex-tab' + (t.id === codexTab ? " active" : "") + '" data-tab="' + t.id + '">' + t.name + "</button>";
     }).join("");
@@ -302,13 +370,31 @@
           '<div class="cx-count">' + (cxy ? "增幅 ×" + xy.rate + " · 得 ×" + cxy : "未收集") + "</div></div>";
       }
       html += "</div>";
-    } else {
+    } else if (codexTab === "lg") {
       html += '<div class="codex-group-title">转世遗泽（结算三选一，带入下一世）</div><div class="codex-grid">';
       for (i = 0; i < D.LEGACIES.length; i++) {
         var lg = D.LEGACIES[i], clg = !!save.codex.lg[lg.name];
         html += '<div class="codex-card' + (clg ? " got" : " locked") + '">' +
           '<div class="cx-name">' + lg.name + "</div>" +
           '<div class="cx-count">' + (clg ? lg.desc : "未铭刻") + "</div></div>";
+      }
+      html += "</div>";
+    } else if (codexTab === "tr") {
+      html += '<div class="codex-group-title">命格词条（每次转世获得一个新的）</div><div class="codex-grid">';
+      for (i = 0; i < D.TRAITS.length; i++) {
+        var tr = D.TRAITS[i], ctr = !!save.codex.tr[tr.name];
+        html += '<div class="codex-card' + (ctr ? " got" : " locked") + '">' +
+          '<div class="cx-name">' + (ctr ? tr.name : "？？？") + "</div>" +
+          '<div class="cx-count">' + (ctr ? tr.desc : "未解锁") + "</div></div>";
+      }
+      html += "</div>";
+    } else {
+      html += '<div class="codex-group-title">法宝装备（修仙途中随机掉落，可带入下一世）</div><div class="codex-grid">';
+      for (i = 0; i < D.EQUIPMENT.length; i++) {
+        var eq = D.EQUIPMENT[i], ceq = save.codex.eq[eq.name] || 0;
+        html += '<div class="codex-card' + (ceq ? " got" : " locked") + '">' +
+          '<div class="cx-name">' + (ceq ? eq.icon + " " + eq.name : "？？？") + "</div>" +
+          '<div class="cx-count">' + (ceq ? eq.rarity + " · " + eqEffectText(eq) : "未收集") + "</div></div>";
       }
       html += "</div>";
     }
@@ -366,7 +452,12 @@
     else if (dailyMode) seed = "XXSIM-DAILY-" + dateStr();
     else seed = randSeedStr();
     Sim.setRng(Sim.mulberry32(Sim.hashStr(seed)));
-    run = Sim.newRun(save.playerLv, achBonus() + streakBonus() + sagaAptBonus(), { legacy: save.legacy || {}, saga: save.saga });
+    run = Sim.newRun(save.playerLv, achBonus() + streakBonus() + sagaAptBonus(), {
+      legacy: save.legacy || {},
+      saga: save.saga,
+      trait: ensureNextTrait(),
+      equipment: save.carriedEquipment || []
+    });
     run.seed = seed; run.chalTarget = chalTarget;
     run.rivalShown = 0; run.passedBots = {};
     /* 图鉴：记录本次觉醒的灵根 */
@@ -408,6 +499,8 @@
     $("attr-apt").textContent = run.apt;
     $("attr-life").textContent = run.age + " / " + run.lifeMax;
     $("attr-combat").textContent = Sim.fmtNum(Sim.combatOf(run));
+    var charmEl = $("attr-charm");
+    if (charmEl) charmEl.textContent = run.charm || 0;
   }
 
   function updateCombo() {
@@ -461,12 +554,14 @@
         run.log.push(l); appendLog(l); soundFor(l);
         if (l.type === "choice") pending = { kind: "choice", choice: l.choice };
         else if (l.type === "catch") pending = { kind: "catch", item: l.item };
+        else if (l.type === "equip") pending = { kind: "equip", item: l.item };
       });
       showRivalMilestones();
       renderAttrs(); updateCombo(); checkSurpass();
       if (run.dead || run.ascended) { finishRun(); return; }
       if (pending && pending.kind === "choice") { openChoice(pending.choice); return; }
       if (pending && pending.kind === "catch") { openCatch(pending.item); return; }
+      if (pending && pending.kind === "equip") { openEquip(pending.item); return; }
       if (run.tribYear) { openTrib(); return; }
       if (!run.bondChosen && Sim.realmOf(run.lvl) >= 2 && run.age - (run.lastInteractAge || 0) >= Sim.interactCd(run.lvl)) {
         run.lastInteractAge = run.age; openBond(); return;
@@ -521,7 +616,9 @@
       res.hidden = false;
       res.innerHTML = '<div class="big">' + run.root + '</div>' + qte("awaken", "result", {
         root: run.root, apt: run.apt, aptTitle: D.APT_TITLES[run.apt], life: run.lifeMax, rival: run.rival.name
-      }, '先天资质 <b>' + run.apt + '</b>（' + D.APT_TITLES[run.apt] + '）<br>寿元 ' + run.lifeMax + ' 年 · 同代宿敌「' + run.rival.name + '」已觉醒');
+      }, '先天资质 <b>' + run.apt + '</b>（' + D.APT_TITLES[run.apt] + '）<br>寿元 ' + run.lifeMax + ' 年 · 同代宿敌「' + run.rival.name + '」已觉醒') +
+        (run.charm ? ' · 魅力 <b>' + run.charm + '</b>' : '') +
+        (run.birthFlavor ? '<div class="birth-flavor">' + run.birthFlavor + '</div>' : '');
       setTimeout(function () { mask.hidden = true; interacting = false; onDone(); }, 1700);
     }
     function down(e) { if (done) return; e.preventDefault(); holding = true; btn.classList.add("holding"); }
@@ -607,6 +704,38 @@
     }
     orb.onclick = function () { finish(true); };
     catchTimer = setTimeout(function () { finish(false); }, dur * 1000);
+  }
+
+  /* ---------------- 法宝装备掉落 ---------------- */
+  function openEquip(item) {
+    interacting = true;
+    var mask = $("equip-mask");
+    if (!mask) { interacting = false; loop(); return; }
+    mask.hidden = false;
+    $("equip-name").innerHTML = item.icon + " " + item.name + '<span class="eq-rarity">' + item.rarity + "</span>";
+    $("equip-desc").textContent = item.desc;
+    $("equip-effect").textContent = eqEffectText(item);
+    var btn = $("btn-equip-take");
+    btn.onclick = function () {
+      btn.disabled = true;
+      var got = Sim.collectEquipment(run, item);
+      var isNew = recordEquipment(item.name);
+      var entry = {
+        age: run.age, type: "equip",
+        text: got ? "拾取法宝「" + item.name + "」，收入囊中" : "已有同名法宝，这次只收取一缕灵光"
+      };
+      run.log.push(entry); appendLog(entry); sGold();
+      if (got && isNew) {
+        var cx = codexProgress();
+        celebrate({
+          icon: item.icon || "🎒", title: "法宝入册 · " + item.name,
+          sub: item.desc + "<br>结算时可选入转世携带栏",
+          prog: "图鉴收集 " + cx.got + " / " + cx.total,
+          colors: ["#f5c96b", "#ffd98a", "#5aa2ff", "#ffffff"], count: 40, dur: 2200
+        });
+      }
+      setTimeout(function () { mask.hidden = true; interacting = false; loop(); }, 500);
+    };
   }
 
   /* ---------------- 渡劫拔河 ---------------- */
@@ -1169,6 +1298,65 @@
     setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, dur * 1000 + 300);
   }
 
+  /* ---------------- 命格词条 / 转世携带装备展示 ---------------- */
+  var MAX_CARRY = 3;
+  function traitIcon(tr) {
+    return tr.kind === "凶" ? "☠" : tr.kind === "吉" ? "✨" : "☯";
+  }
+  function renderNextTrait() {
+    var box = $("settle-trait");
+    if (!box) return;
+    var tr = findTrait(save.nextTrait);
+    if (!tr) { box.hidden = true; return; }
+    box.hidden = false;
+    box.innerHTML = '<span class="trait-kind ' + tr.kind + '">' + traitIcon(tr) + " " + tr.kind + "</span>" +
+      "下一世命格词条：<b>" + tr.name + "</b><br>" + tr.desc;
+  }
+  function renderEquipmentPick() {
+    var box = $("settle-equip"), cards = $("equip-cards");
+    if (!box || !cards) return;
+    var pool = ((run && run.equipment) || []).concat((run && run.birthEquipment) || []);
+    var seen = {}, unique = [];
+    pool.forEach(function (e) { if (e && !seen[e.id]) { seen[e.id] = true; unique.push(e); } });
+    if (!unique.length) {
+      box.hidden = false;
+      cards.innerHTML = '<div class="equip-empty">这一世没有可带走的法宝，下一世空手入轮回。</div>';
+      save.carriedEquipment = [];
+      persist();
+      return;
+    }
+    var initial = unique.slice(0, MAX_CARRY).map(function (e) { return e.id; });
+    save.carriedEquipment = initial;
+    persist();
+    box.hidden = false;
+    cards.innerHTML = "";
+    unique.forEach(function (e) {
+      var selected = initial.indexOf(e.id) >= 0;
+      var c = document.createElement("button");
+      c.type = "button";
+      c.className = "equip-card" + (selected ? " picked" : "");
+      c.innerHTML = '<div class="ec-top">' + e.icon + " " + e.name + '<span class="eq-rarity">' + e.rarity + "</span></div>" +
+        '<div class="ec-desc">' + e.desc + "</div>" +
+        '<div class="ec-effect">' + eqEffectText(e) + "</div>";
+      c.onclick = function () {
+        var idx = save.carriedEquipment.indexOf(e.id);
+        if (idx >= 0) {
+          save.carriedEquipment.splice(idx, 1);
+          c.classList.remove("picked");
+        } else {
+          if (save.carriedEquipment.length >= MAX_CARRY) {
+            toast("最多携带 " + MAX_CARRY + " 件法宝转世");
+            return;
+          }
+          save.carriedEquipment.push(e.id);
+          c.classList.add("picked");
+        }
+        persist(); sGold();
+      };
+      cards.appendChild(c);
+    });
+  }
+
   /* ---------------- 结算 ---------------- */
   function finishRun() {
     if (finished) return;
@@ -1324,6 +1512,9 @@
     }
     $("settle-rank").textContent = pos > 0 ? "🏆 仙榜战力第 " + pos + " 名（共 " + save.board.length + " 位修士）" : "";
 
+    rollNextTrait();
+    renderNextTrait();
+    renderEquipmentPick();
     renderLegacyPick();
     show("view-settle");
     run._finalCombat = finalCombat;

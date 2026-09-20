@@ -48,6 +48,18 @@
   /* ---------- 遗泽键位查询 ---------- */
   function has(legacy, key) { return !!(legacy && legacy[key]); }
 
+  function traitById(id) {
+    if (!id) return null;
+    for (var i = 0; i < D.TRAITS.length; i++) if (D.TRAITS[i].id === id) return D.TRAITS[i];
+    return null;
+  }
+
+  function equipmentById(id) {
+    if (!id) return null;
+    for (var i = 0; i < D.EQUIPMENT.length; i++) if (D.EQUIPMENT[i].id === id) return D.EQUIPMENT[i];
+    return null;
+  }
+
   /* ---------- 抽取灵根：先天资质按权重，再在组内取名 ----------
    * 玩家等级 / 成就 / 缘池遗泽：提升高阶（资质 6-10）整体概率 */
   function drawRoot(playerLv, achBonus, legacy) {
@@ -83,7 +95,7 @@
 
   /* 战力 = 系数 × 等级^2.4 + 额外战力（×仙骨遗泽） */
   function combatOf(s) {
-    var base = D.COMBAT_COEF[s.apt] * Math.pow(s.lvl, 2.4) + (s.combatExtra || 0);
+    var base = (D.COMBAT_COEF[s.apt] * Math.pow(s.lvl, 2.4) + (s.combatExtra || 0)) * (s.combatMul || 1);
     if (has(s.legacy, "xianGu")) base *= 1.15;
     return Math.round(base);
   }
@@ -110,6 +122,14 @@
     opts = opts || {};
     var legacy = opts.legacy || {};
     var saga = opts.saga || null;
+    var trait = traitById(opts.trait);
+    var carried = [];
+    if (opts.equipment && opts.equipment.length) {
+      for (var ei = 0; ei < opts.equipment.length; ei++) {
+        var e = equipmentById(opts.equipment[ei]);
+        if (e) carried.push(e);
+      }
+    }
     var d = drawRoot(playerLv, achBonus, legacy);
     var baseLife = irand(40 + d.apt * 5, 60 + d.apt * 7);
     if (has(legacy, "mingHuo")) baseLife += 25;
@@ -118,12 +138,23 @@
     if (saga && saga.dao > 0) baseLife += Math.round(Math.min(90, saga.dao * 3));
     var startLvl = 1;
     if (has(legacy, "startLvl")) startLvl = 6;
+    if (trait && trait.passive && trait.passive.startLvl) startLvl = Math.max(startLvl, trait.passive.startLvl);
+    if (trait && trait.passive && trait.passive.life) baseLife += trait.passive.life;
+    baseLife = Math.max(1, baseLife);
     var s = {
       apt: d.apt, root: d.root,
       lvl: startLvl, age: 6,
       lifeMax: baseLife,
       combatExtra: 0,
       cultBonus: 0,
+      combatMul: 1,
+      breakMul: 1,
+      xpMul: 1,
+      charm: 0,
+      trait: opts.trait || null,
+      birthEquipment: carried,
+      equipment: [],
+      birthFlavor: "",
       xianyuan: null,
       ascended: false,
       dead: false,
@@ -146,14 +177,41 @@
       rival: null,
       log: []
     };
+    /* 命格词条被动效果 */
+    if (trait && trait.passive) {
+      if (trait.passive.combatMul) s.combatMul *= trait.passive.combatMul;
+      if (trait.passive.breakMul) s.breakMul *= trait.passive.breakMul;
+      if (trait.passive.xpMul) s.xpMul *= trait.passive.xpMul;
+      if (trait.passive.charm) s.charm += trait.passive.charm;
+      if (trait.passive.cultBonus) s.cultBonus += trait.passive.cultBonus;
+    }
+    /* 转世携带法宝：出生即生效 */
+    var birthFlavor = [];
+    for (var ci = 0; ci < carried.length; ci++) {
+      var ce = carried[ci];
+      if (ce.charm) s.charm += ce.charm;
+      if (ce.combatMul) s.combatMul *= ce.combatMul;
+      if (ce.breakMul) s.breakMul *= ce.breakMul;
+      if (ce.xpMul) s.xpMul *= ce.xpMul;
+      if (ce.eff) applyEff(s, ce.eff);
+      birthFlavor.push('<div class="birth-equip">' + ce.icon + " " + ce.name + "　" + ce.desc + "</div>");
+    }
+    if (trait) {
+      birthFlavor.unshift('<div class="birth-trait ' + (trait.kind === "凶" ? "bad" : trait.kind === "吉" ? "good" : "neutral") + '">命格词条 · <b>' + trait.name + "</b>　" + trait.desc + "</div>");
+    }
+    s.birthFlavor = birthFlavor.join("");
     /* 宿怨未消（累世死敌）→ 起手更狠，带着恨意入世 */
     if (saga && saga.grudge > 0) {
       s.combatExtra += Math.round(Math.min(6000, saga.grudge * 150) * (1 + d.apt * 0.06));
     }
+    var birthExtra = [];
+    if (trait) birthExtra.push("命格词条【" + trait.name + "】");
+    for (var cj = 0; cj < carried.length; cj++) birthExtra.push("怀中抱着「" + carried[cj].name + "」");
     s.log.push({
       age: 6, type: "awake",
       text: "觉醒「" + d.root + "」，先天资质 " + d.apt + "（" + D.APT_TITLES[d.apt] + "），寿元 " + baseLife + " 年" +
-        (startLvl > 1 ? "，携前世余温起步于 " + startLvl + " 级" : "")
+        (startLvl > 1 ? "，携前世余温起步于 " + startLvl + " 级" : "") +
+        (birthExtra.length ? "，" + birthExtra.join("、") : "")
     });
     s.rival = makeRival(s);
     return s;
@@ -168,6 +226,7 @@
       apt: apt, lvl: 1, age: 6, lifeMax: life, combatExtra: 0,
       cultBonus: 0, xianyuan: null, ascended: false, dead: false,
       cause: "", combo: 0, comboBest: 0, misses: [], caught: 0,
+      combatMul: 1, breakMul: 1, xpMul: 1, charm: 0, trait: null, equipment: [],
       legacy: {}, tribAnnounced: true, tribYear: false,
       lastChoiceAge: -999, lastCatchAge: -999, log: []
     };
@@ -206,12 +265,27 @@
     };
   }
 
+  /* ---------- 命格词条：每年随机触发一次 ---------- */
+  function traitTick(s, logs) {
+    if (!s.trait || !logs) return;
+    var tr = traitById(s.trait);
+    if (!tr || !tr.trigger || !tr.trigger.p) return;
+    if (rng() >= tr.trigger.p) return;
+    var text = tr.trigger.text && tr.trigger.text.length ? pick(tr.trigger.text) : tr.name + " 隐隐发动";
+    var applied = applyEff(s, tr.trigger.eff || {});
+    logs.push({
+      age: s.age, type: tr.kind === "凶" ? "down" : "good",
+      text: "【命格·" + tr.name + "】" + text + (applied || "")
+    });
+  }
+
   /* ---------- 单年推进 ----------
    * silentRival=true 时用于宿敌模拟：屏蔽抉择 / 机缘 / 渡劫提示 */
   function stepYear(s, silentRival) {
     var logs = [];
     s.age++;
     s.tribYear = false;
+    traitTick(s, logs);
 
     /* 寿终 */
     if (s.age > s.lifeMax) {
@@ -262,6 +336,14 @@
         logs.push({ age: s.age, type: "catch", item: item, text: "天边一道流光坠落——是「" + item.name + "」！快接住它！" });
         return logs;
       }
+      /* 法宝装备：随机掉落，结算时可选择带入下一世 */
+      var equipP = 0.018 * (has(s.legacy, "fuYun") ? 1.7 : 1) * (1 + Math.min(0.5, (s.charm || 0) * 0.005));
+      if (s.age - (s.lastInteractAge || 0) >= cd && rng() < equipP) {
+        var eq = pick(D.EQUIPMENT);
+        s.lastInteractAge = s.age;
+        logs.push({ age: s.age, type: "equip", item: eq, text: "天光乍破，一件法宝「" + eq.name + "」坠落在你面前！" });
+        return logs;
+      }
     }
 
     /* 随机事件（按等级段 + 境界过滤） */
@@ -280,7 +362,7 @@
 
     /* 突破判定：感悟乘算加成；夙世悟性 ×1.06；概率 >30% 允许连破（每次减半，最多 3 次） */
     var broke = 0;
-    var p = breakChance(s.apt, s.lvl) * (1 + s.cultBonus / 100);
+    var p = breakChance(s.apt, s.lvl) * (1 + s.cultBonus / 100) * (s.breakMul || 1);
     if (has(s.legacy, "suZhi")) p *= 1.06;
     /* 死敌压迫感：落后时怒而突破(+18%)，领先时道心锐利(+6%) */
     if (s.bond === "enemy") p *= ((s.foeLvl || 0) > s.lvl) ? 1.18 : 1.06;
@@ -347,7 +429,10 @@
     var parts = [];
     if (eff.xp) {
       var v = Math.round(rand(eff.xp[0], eff.xp[1]));
-      if (v >= 0 && has(s.legacy, "daoHen")) v = Math.round(v * 1.3);
+      if (v >= 0) {
+        v = Math.round(v * (s.xpMul || 1));
+        if (has(s.legacy, "daoHen")) v = Math.round(v * 1.3);
+      }
       s.cultBonus = Math.max(0, s.cultBonus + v);
       parts.push(v >= 0 ? "（感悟 +" + v + "）" : "（感悟 " + v + "）");
     }
@@ -405,6 +490,15 @@
     return null;
   }
 
+  function collectEquipment(s, item) {
+    if (!s.equipment) s.equipment = [];
+    for (var i = 0; i < s.equipment.length; i++) {
+      if (s.equipment[i].id === item.id) return null;
+    }
+    s.equipment.push(item);
+    return item;
+  }
+
   /* ---------- 渡劫拔河（技能化 QTE） ---------- */
   var TRIB_TIME = 8;    /* 秒 */
   var TRIB_CLICK = 3;   /* 每次点击/按压进度（百分点） */
@@ -451,6 +545,7 @@
     newRun: newRun, stepYear: stepYear, runExp: runExp,
     pickEvent: pickEvent, applyEff: applyEff, applyEvent: applyEvent,
     resolveChoice: resolveChoice, catchItem: catchItem, missCatch: missCatch,
+    collectEquipment: collectEquipment,
     TRIB_TIME: TRIB_TIME, TRIB_CLICK: TRIB_CLICK, tribDrain: tribDrain,
     tribInfo: tribInfo, ascendNow: ascendNow, tribFail: tribFail
   };

@@ -277,6 +277,7 @@ body {
 .log-rival { color: #ff9b8a; font-style: italic; }
 .log-choice { color: var(--purple); font-weight: 700; }
 .log-catch { color: var(--gold2); font-weight: 700; }
+.log-equip { color: var(--blue); font-weight: 700; }
 .log-end { color: #8494ad; font-weight: 700; }
 
 /* ---------- 觉醒仪式 ---------- */
@@ -300,6 +301,14 @@ body {
 .btn-hold.holding { background: linear-gradient(135deg, #ffd98a, #f0b94e); transform: scale(0.98); }
 .awaken-result { text-align: center; font-size: 15px; color: var(--gold2); line-height: 1.8; animation: fadein 0.3s ease; }
 .awaken-result .big { font-size: 22px; font-weight: 800; color: #fff; text-shadow: 0 0 16px rgba(245, 201, 107, 0.7); }
+.birth-flavor { margin-top: 12px; text-align: left; font-size: 12px; color: var(--sub); line-height: 1.7; }
+.birth-trait, .birth-equip {
+  border: 1px solid var(--line); border-radius: 10px; padding: 7px 9px; margin-top: 7px; background: rgba(0,0,0,0.18);
+}
+.birth-trait.good { border-color: rgba(89,214,140,0.45); color: #cde9d4; }
+.birth-trait.bad { border-color: rgba(255,107,107,0.45); color: #ffd0c8; }
+.birth-trait.neutral { border-color: rgba(185,138,255,0.45); color: #e4d7ff; }
+.birth-trait b, .birth-equip b { color: var(--gold2); }
 
 /* ---------- 抉择 ---------- */
 .choice-box { align-items: stretch; }
@@ -355,6 +364,27 @@ body {
   background: var(--card); border: 1px solid rgba(185, 138, 255, 0.4); border-radius: 12px;
   padding: 9px 12px; margin: 0 0 12px; font-size: 13px; color: var(--purple);
 }
+.home-trait {
+  border: 1px solid rgba(245, 201, 107, 0.42); border-radius: 12px;
+  padding: 9px 12px; margin: 0 0 12px; font-size: 13px; color: #ffe6ad;
+  background: linear-gradient(90deg, rgba(245,201,107,0.12), rgba(89,214,140,0.05));
+  line-height: 1.7;
+}
+.home-trait b { color: var(--gold2); }
+.trait-kind {
+  display: inline-block; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px;
+  margin-right: 4px; vertical-align: 1px;
+}
+.trait-kind.吉 { background: rgba(89, 214, 140, 0.16); color: var(--green); }
+.trait-kind.凶 { background: rgba(255, 107, 107, 0.16); color: var(--red); }
+.trait-kind.玄 { background: rgba(185, 138, 255, 0.18); color: var(--purple); }
+.home-equipment {
+  border: 1px solid rgba(90, 162, 255, 0.4); border-radius: 12px;
+  padding: 9px 12px; margin: 0 0 12px; font-size: 13px; color: #cfe0ff;
+  background: linear-gradient(90deg, rgba(90,162,255,0.12), rgba(143,230,176,0.05));
+  line-height: 1.7;
+}
+.home-equipment b { color: var(--gold2); }
 .settle-legacy { margin-top: 16px; }
 .legacy-head { font-size: 14px; color: var(--gold); margin-bottom: 10px; font-weight: 700; }
 .legacy-cards { display: flex; flex-direction: column; gap: 10px; }
@@ -366,6 +396,31 @@ body {
 .legacy-card.picked { border-color: var(--gold); box-shadow: 0 0 18px rgba(245, 201, 107, 0.25); }
 .legacy-card .lc-name { font-size: 15px; font-weight: 700; color: var(--gold2); }
 .legacy-card .lc-desc { font-size: 12px; color: var(--sub); margin-top: 4px; line-height: 1.5; }
+.settle-trait {
+  border: 1px solid rgba(245, 201, 107, 0.4); border-radius: 12px;
+  padding: 10px 12px; margin-top: 16px; font-size: 13px; color: #ffe6ad;
+  background: linear-gradient(90deg, rgba(245,201,107,0.12), rgba(185,138,255,0.06));
+  line-height: 1.7; text-align: left;
+}
+.settle-trait b { color: var(--gold2); }
+.settle-equip { margin-top: 16px; }
+.equip-cards { display: flex; flex-direction: column; gap: 10px; }
+.equip-card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 12px 14px; cursor: pointer; text-align: left; transition: transform 0.1s ease;
+  color: var(--text);
+}
+.equip-card:active { transform: scale(0.98); }
+.equip-card.picked { border-color: var(--gold); box-shadow: 0 0 18px rgba(245, 201, 107, 0.25); }
+.equip-card .ec-top { font-size: 15px; font-weight: 700; color: var(--gold2); }
+.equip-card .ec-desc { font-size: 12px; color: var(--sub); margin-top: 4px; line-height: 1.5; }
+.equip-card .ec-effect { font-size: 11px; color: var(--green); margin-top: 4px; }
+.equip-empty { color: var(--sub); font-size: 13px; text-align: center; padding: 12px 0; }
+.equip-box { align-items: center; text-align: center; }
+.equip-name { font-size: 20px; font-weight: 800; color: var(--gold2); }
+.equip-name .eq-rarity { font-size: 11px; font-weight: 700; color: var(--purple); border: 1px solid rgba(185,138,255,0.5); border-radius: 999px; padding: 2px 8px; margin-left: 8px; }
+.equip-desc { font-size: 13px; color: var(--sub); line-height: 1.7; }
+.equip-effect { font-size: 12px; color: var(--green); font-weight: 700; }
 
 /* ---------- 每日同参 ---------- */
 .home-daily { margin-bottom: 12px; }
